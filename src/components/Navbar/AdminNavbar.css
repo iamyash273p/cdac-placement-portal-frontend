@@ -1,0 +1,289 @@
+.admin-topbar {
+  height: 64px;
+  padding: 0 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5eaf2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.admin-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.admin-brand-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #263b80;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.admin-topbar-brand h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #172554;
+  font-weight: 800;
+}
+
+.admin-topbar-brand span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.admin-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-view-link {
+  padding: 7px 12px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.student-view-link:hover {
+  background: #f1f5f9;
+}
+
+/* Profile Dropdown on Navbar */
+.admin-profile-dropdown {
+  position: relative;
+}
+
+.admin-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #edf1ff;
+  color: #263b80;
+  border: 1px solid #dbe4ff;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #263b80;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-avatar-img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.admin-dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 230px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  padding: 8px;
+  z-index: 100;
+}
+
+.admin-dropdown-info {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-dropdown-info strong {
+  font-size: 13px;
+  color: #172554;
+}
+
+.admin-dropdown-info span {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.admin-dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.admin-dropdown-item:hover {
+  background: #f1f5ff;
+  color: #263b80;
+}
+
+.admin-dropdown-item.logout {
+  color: #b91c1c;
+}
+
+.admin-dropdown-item.logout:hover {
+  background: #fee2e2;
+}
+
+/* Edit Profile Modal */
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 1100;
+}
+
+.admin-modal-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.admin-modal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-modal-top h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #172554;
+}
+
+.admin-close-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.admin-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.admin-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-photo-preview,
+.admin-photo-placeholder {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e8edff;
+  color: #263b80;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.admin-field input {
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.admin-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.admin-cancel-btn {
+  padding: 9px 14px;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-save-btn {
+  padding: 9px 16px;
+  background: #263b80;
+  color: #ffffff;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .admin-topbar {
+    padding: 0 14px;
+  }
+  .admin-profile-label,
+  .admin-topbar-brand span {
+    display: none;
+  }
+}

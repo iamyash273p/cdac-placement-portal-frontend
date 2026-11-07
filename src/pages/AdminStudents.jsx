@@ -1,4 +1,6 @@
-import AdminSection from "./AdminSection";
+import React from "react";
+import AdminDashboard from "./AdminDashboard";
+
 export default function AdminStudents() {
-  return <AdminSection title="Students" description="View and manage registered CDAC students." />;
+  return <AdminDashboard defaultTab="students" />;
 }

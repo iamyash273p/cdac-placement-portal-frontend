@@ -1,34 +1,104 @@
 .admin-sidebar {
-  width: 235px;
-  flex: 0 0 235px;
+  width: 240px;
+  flex: 0 0 240px;
+  min-height: calc(100vh - 64px);
   box-sizing: border-box;
-  padding: 26px 15px;
-  background: #fff;
+  padding: 24px 16px;
+  background: #ffffff;
   border-right: 1px solid #e5eaf2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
+
 .admin-sidebar-title {
-  margin: 0 12px 18px;
+  margin: 0 12px 14px;
   color: #8993a7;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.3px;
 }
-.admin-sidebar-links { display: flex; flex-direction: column; gap: 6px; }
+
+.admin-sidebar-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .admin-sidebar-link {
-  display: block;
-  padding: 12px 13px;
-  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  border-radius: 9px;
   color: #475569;
   text-decoration: none;
   font-size: 14px;
   font-weight: 600;
-  transition: .2s ease;
+  transition: all 0.2s ease;
 }
-.admin-sidebar-link:hover { background: #f1f5ff; color: #263b80; }
-.admin-sidebar-link.active { background: #e9efff; color: #263b80; }
+
+.sidebar-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.admin-sidebar-link:hover {
+  background: #f1f5ff;
+  color: #263b80;
+  transform: translateX(2px);
+}
+
+.admin-sidebar-link.active {
+  background: #263b80;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(38, 59, 128, 0.18);
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+}
+
+.portal-tag {
+  margin: 0 0 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #172554;
+}
+
+.sidebar-footer span {
+  font-size: 11px;
+  color: #64748b;
+}
+
 @media (max-width: 700px) {
-  .admin-sidebar { width: 100%; flex: 0 0 auto; padding: 14px; border-right: 0; border-bottom: 1px solid #e5eaf2; }
-  .admin-sidebar-title { margin-bottom: 10px; }
-  .admin-sidebar-links { flex-direction: row; flex-wrap: wrap; }
-  .admin-sidebar-link { padding: 9px 11px; }
+  .admin-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    min-height: auto;
+    padding: 14px;
+    border-right: 0;
+    border-bottom: 1px solid #e5eaf2;
+  }
+
+  .admin-sidebar-title {
+    margin-bottom: 10px;
+  }
+
+  .admin-sidebar-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .admin-sidebar-link {
+    padding: 9px 12px;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
 }

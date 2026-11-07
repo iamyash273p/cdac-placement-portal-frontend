@@ -13,4 +13,5 @@ function AdminLayout({ children }) {
     </div>
   );
 }
+
 export default AdminLayout;

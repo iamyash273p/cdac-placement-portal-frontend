@@ -8,7 +8,7 @@
 .admin-shell {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - 64px);
 }
 
 .admin-main {
@@ -19,6 +19,10 @@
 }
 
 @media (max-width: 700px) {
-  .admin-shell { min-height: calc(100vh - 64px); }
-  .admin-main { padding: 20px 14px; }
+  .admin-shell {
+    flex-direction: column;
+  }
+  .admin-main {
+    padding: 20px 14px;
+  }
 }
