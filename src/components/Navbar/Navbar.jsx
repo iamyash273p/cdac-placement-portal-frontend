@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
 function Navbar({
   title,
   links,
-  showLogin = true,
+  showLogin = false,
   onLogout,
   userProfile,
   onSaveProfile
@@ -20,6 +20,12 @@ function Navbar({
       photo: ""
     }
   );
+
+  useEffect(() => {
+    if (userProfile) {
+      setFormData(userProfile);
+    }
+  }, [userProfile]);
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files?.[0];
@@ -64,7 +70,6 @@ function Navbar({
         </div>
 
         <div className="portal-nav-actions">
-          {/* Profile Dropdown Button */}
           <div className="profile-dropdown-wrap">
             <button
               type="button"
@@ -72,17 +77,13 @@ function Navbar({
               onClick={() => setDropdownOpen((prev) => !prev)}
             >
               {formData.photo ? (
-                <img
-                  src={formData.photo}
-                  alt="Profile"
-                  className="nav-profile-img"
-                />
+                <img src={formData.photo} alt="Profile" className="nav-profile-img" />
               ) : (
                 <span className="nav-profile-avatar">
                   {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
                 </span>
               )}
-              <span>Profile ▾</span>
+              <span>{formData.name || "Profile"} ▾</span>
             </button>
 
             {dropdownOpen && (
@@ -128,32 +129,18 @@ function Navbar({
         </div>
       </nav>
 
-      {/* Edit Profile Popup Modal (Update Photo, Email, Phone No) */}
       {showEditModal && (
-        <div
-          className="nav-modal-backdrop"
-          onClick={() => setShowEditModal(false)}
-        >
+        <div className="nav-modal-backdrop" onClick={() => setShowEditModal(false)}>
           <div className="nav-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="nav-modal-header">
               <h3>Edit Profile</h3>
-              <button
-                type="button"
-                className="nav-modal-close"
-                onClick={() => setShowEditModal(false)}
-              >
-                ✕
-              </button>
+              <button type="button" className="nav-modal-close" onClick={() => setShowEditModal(false)}>✕</button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="nav-profile-form">
               <div className="nav-photo-preview-row">
                 {formData.photo ? (
-                  <img
-                    src={formData.photo}
-                    alt="Preview"
-                    className="modal-photo-preview"
-                  />
+                  <img src={formData.photo} alt="Preview" className="modal-photo-preview" />
                 ) : (
                   <div className="modal-photo-placeholder">
                     {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
@@ -161,11 +148,7 @@ function Navbar({
                 )}
                 <div className="nav-form-group" style={{ flex: 1 }}>
                   <label>Update Profile Photo</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                  />
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} />
                 </div>
               </div>
 
@@ -175,10 +158,7 @@ function Navbar({
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  placeholder="Enter new email"
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
 
@@ -188,24 +168,13 @@ function Navbar({
                   type="tel"
                   required
                   value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
-                  }
-                  placeholder="Enter phone number"
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 />
               </div>
 
               <div className="nav-modal-actions">
-                <button
-                  type="button"
-                  className="nav-cancel-btn"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="nav-save-btn">
-                  Save Changes
-                </button>
+                <button type="button" className="nav-cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button type="submit" className="nav-save-btn">Save Changes</button>
               </div>
             </form>
           </div>
@@ -216,41 +185,103 @@ function Navbar({
 }
 
 export function StudentNavbar({ onLogout }) {
-  const [studentProfile, setStudentProfile] = useState({
-    name: "Student",
-    email: "student.dac@cdac.in",
-    phone: "+91 9876543210",
-    photo: ""
+  const navigate = useNavigate();
+  const [studentProfile, setStudentProfile] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      return {
+        name: parsed.name || "Student",
+        email: parsed.email || "student.dac@cdac.in",
+        phone: parsed.phone || "+91 9876543210",
+        photo: parsed.photo || ""
+      };
+    }
+    return { name: "Student", email: "student.dac@cdac.in", phone: "+91 9876543210", photo: "" };
   });
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    if (onLogout) onLogout();
+    navigate("/login");
+  };
+
+  const handleSaveProfile = (updatedProfile) => {
+    setStudentProfile(updatedProfile);
+    const existing = JSON.parse(localStorage.getItem("user")) || {};
+    localStorage.setItem("user", JSON.stringify({ ...existing, ...updatedProfile }));
+  };
 
   return (
     <Navbar
       title="CDAC Placement Portal"
-      onLogout={onLogout}
+      onLogout={handleLogout}
       userProfile={studentProfile}
-      onSaveProfile={setStudentProfile}
+      onSaveProfile={handleSaveProfile}
       links={[
-        { name: "Student Dashboard", path: "/" },
+        { name: "Student Dashboard", path: "/student-dashboard" },
         { name: "About Us", path: "/about" },
         { name: "Contact Us", path: "/contact" },
         { name: "Admin Portal", path: "/admin" }
       ]}
-      showLogin={!onLogout}
+      showLogin={false}
     />
   );
 }
 
 export function PublicNavbar() {
-  return <StudentNavbar />;
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    return <StudentNavbar />;
+  }
+
+  return (
+    <Navbar
+      title="CDAC Placement Portal"
+      links={[
+        { name: "Home", path: "/" },
+        { name: "About Us", path: "/about" },
+        { name: "Contact Us", path: "/contact" }
+      ]}
+      showLogin={true}
+      userProfile={{ name: "Visitor", email: "Guest", phone: "-", photo: "" }}
+      onLogout={() => navigate("/login")}
+    />
+  );
 }
 
 export function AdminNavbar({ onLogout }) {
   const navigate = useNavigate();
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Placement Officer",
+    email: "officer@cdac.in",
+    phone: "+91 9890123456",
+    photo: ""
+  });
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    if (onLogout) onLogout();
+    navigate("/login");
+  };
+
   return (
     <Navbar
-      title="CDAC Placement Portal"
-      onLogout={onLogout || (() => navigate("/login"))}
-      links={[{ name: "Admin Panel", path: "/admin" }]}
+      title="CDAC Placement Portal (Admin)"
+      onLogout={handleLogout}
+      userProfile={adminProfile}
+      onSaveProfile={setAdminProfile}
+      links={[
+        { name: "Dashboard", path: "/admin" },
+        { name: "Drives", path: "/admin/drives" },
+        { name: "Students", path: "/admin/students" },
+        { name: "Student View", path: "/student-dashboard" }
+      ]}
+      showLogin={false}
     />
   );
 }

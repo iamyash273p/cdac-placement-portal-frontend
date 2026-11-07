@@ -1,0 +1,165 @@
+/* Student Dashboard Styles */
+.student-dashboard-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+}
+
+.student-main-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+/* Welcome Banner */
+.student-welcome-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 2.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+  margin-bottom: 2rem;
+}
+
+.student-welcome-card h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+}
+
+.student-welcome-card p {
+  color: #64748b;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Section Header */
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+}
+
+/* Drives Grid */
+.drives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+
+.drive-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.drive-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+
+.drive-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.drive-company-name {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.drive-status-badge {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drive-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.drive-status-badge.pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.drive-role {
+  margin: 0 0 0.5rem 0;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.drive-package {
+  margin: 0 0 0.75rem 0;
+  color: #059669;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.drive-meta {
+  margin: 0 0 0.4rem 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.apply-btn {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 10px;
+  background: #263b80;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.apply-btn:hover {
+  background: #172554;
+}
+
+/* Loading & States */
+.dashboard-message {
+  color: #64748b;
+  font-size: 1rem;
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.dashboard-error {
+  color: #ef4444;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .student-main-container {
+    padding: 1.5rem 1rem;
+  }
+  .student-welcome-card {
+    padding: 1.5rem;
+  }
+  .drives-grid {
+    grid-template-columns: 1fr;
+  }
+}

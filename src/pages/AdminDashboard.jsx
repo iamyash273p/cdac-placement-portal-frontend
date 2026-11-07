@@ -1,170 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import "./AdminDashboard.css";
 
-export const initialDrives = [
-  {
-    id: 1,
-    company: "TCS",
-    role: "Java Developer",
-    package: "7.0 LPA",
-    location: "Pune",
-    date: "15 Nov 2026",
-    criteria: "60% throughout",
-    status: "Active"
-  },
-  {
-    id: 2,
-    company: "Infosys",
-    role: "Software Engineer",
-    package: "6.5 LPA",
-    location: "Bengaluru",
-    date: "18 Nov 2026",
-    criteria: "No active backlogs",
-    status: "Active"
-  },
-  {
-    id: 3,
-    company: "Wipro",
-    role: "Full Stack Developer",
-    package: "5.5 LPA",
-    location: "Mumbai",
-    date: "22 Nov 2026",
-    criteria: "60% in Graduation",
-    status: "Pending"
-  },
-  {
-    id: 4,
-    company: "Tech Mahindra",
-    role: "Graduate Engineer Trainee",
-    package: "5.0 LPA",
-    location: "Pune",
-    date: "25 Nov 2026",
-    criteria: "60% throughout",
-    status: "Active"
-  }
-];
-
-export const initialStudents = [
-  {
-    prn: "CDAC2026001",
-    name: "Aarav Deshmukh",
-    phone: "9876543210",
-    address: "Kothrud, Pune",
-    tenthMarks: "84%",
-    twelfthMarks: "79%",
-    degreeMarks: "74%",
-    cmceMarks: "82",
-    cceeMarks: "86",
-    company: "TCS (7.0 LPA)",
-    status: "Placed",
-    photo: ""
-  },
-  {
-    prn: "CDAC2026002",
-    name: "Sneha Kulkarni",
-    phone: "9823012345",
-    address: "Wakad, Pune",
-    tenthMarks: "88%",
-    twelfthMarks: "83%",
-    degreeMarks: "81%",
-    cmceMarks: "89",
-    cceeMarks: "91",
-    company: "Infosys (9.5 LPA)",
-    status: "Placed",
-    photo: ""
-  },
-  {
-    prn: "CDAC2026003",
-    name: "Rohan Patil",
-    phone: "9765432109",
-    address: "Andheri, Mumbai",
-    tenthMarks: "72%",
-    twelfthMarks: "70%",
-    degreeMarks: "68%",
-    cmceMarks: "74",
-    cceeMarks: "71",
-    company: "-",
-    status: "Unplaced",
-    photo: ""
-  },
-  {
-    prn: "CDAC2026004",
-    name: "Priya Nair",
-    phone: "9890123456",
-    address: "Baner, Pune",
-    tenthMarks: "85%",
-    twelfthMarks: "80%",
-    degreeMarks: "77%",
-    cmceMarks: "84",
-    cceeMarks: "80",
-    company: "Accenture (6.5 LPA)",
-    status: "Placed",
-    photo: ""
-  },
-  {
-    prn: "CDAC2026005",
-    name: "Vikram Joshi",
-    phone: "9922334455",
-    address: "Cidco, Nashik",
-    tenthMarks: "70%",
-    twelfthMarks: "68%",
-    degreeMarks: "65%",
-    cmceMarks: "69",
-    cceeMarks: "67",
-    company: "-",
-    status: "Unplaced",
-    photo: ""
-  }
-];
+const API_BASE = "http://192.168.0.200:7500/api";
 
 function AdminDashboard({ defaultTab = "overview" }) {
-  const [activeTab, setActiveTab] = useState(defaultTab); // "overview" | "drives" | "students"
-  const [batchFilter, setBatchFilter] = useState("all"); // "all" | "Placed" | "Unplaced"
-  const [drives, setDrives] = useState(initialDrives);
-  const [students, setStudents] = useState(initialStudents);
-  const [admins, setAdmins] = useState([{ id: 1, name: "Main Admin" }]);
+  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [batchFilter, setBatchFilter] = useState("all");
+  const [drives, setDrives] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Modals state
   const [showDriveModal, setShowDriveModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+
+  // Form states
+  const [adminError, setAdminError] = useState("");
+  const [adminForm, setAdminForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+  
+  const [studentForm, setStudentForm] = useState({
+    photo: "", name: "", email: "", phone: "", address: "", prn: "", password: "",
+    tenthMarks: "", twelfthMarks: "", degreeMarks: "", cmceMarks: "", cceeMarks: "", status: "Unplaced", passout_year: "2026"
+  });
+
+  const [editStudentData, setEditStudentData] = useState(null);
+
+  const [driveForm, setDriveForm] = useState({
+    company: "", role: "", package: "", location: "", drive_date: "", passout_year: "2026", criteria: "", status: "Active"
+  });
 
   const navigate = useNavigate();
 
-  // 1. Create Drive Form State
-  const [driveForm, setDriveForm] = useState({
-    company: "",
-    role: "",
-    package: "",
-    location: "",
-    date: "",
-    criteria: "",
-    status: "Active"
-  });
+  const fetchData = async () => {
+    try {
+      const [studentsRes, drivesRes] = await Promise.all([
+        fetch(`${API_BASE}/students`),
+        fetch(`${API_BASE}/drives`)
+      ]);
+      const studentsData = await studentsRes.json();
+      const drivesData = await drivesRes.json();
 
-  // 2. Create Admin Form State (name, create pass)
-  const [adminForm, setAdminForm] = useState({
-    name: "",
-    password: ""
-  });
+      if (studentsData.success) setStudents(studentsData.students);
+      if (drivesData.success) setDrives(drivesData.drives);
+    } catch (err) {
+      console.error("Error fetching admin data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 3. Add Student Form State (photo, name, phone, student address, Prn no, Password, 10th Marks, 12th, degree marks, CMCE marks, CCEE marks)
-  const [studentForm, setStudentForm] = useState({
-    photo: "",
-    name: "",
-    phone: "",
-    address: "",
-    prn: "",
-    password: "",
-    tenthMarks: "",
-    twelfthMarks: "",
-    degreeMarks: "",
-    cmceMarks: "",
-    cceeMarks: "",
-    status: "Unplaced"
-  });
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const placedStudents = students.filter((s) => s.status === "Placed");
   const unplacedStudents = students.filter((s) => s.status === "Unplaced");
@@ -177,7 +68,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
     { label: "Current Batch Students", value: students.length, note: "Total registered in batch", icon: "🎓" },
     { label: "Placed Students", value: placedStudents.length, note: "Offers received", icon: "✅" },
     { label: "Unplaced Students", value: unplacedStudents.length, note: "Eligible for upcoming drives", icon: "⏳" },
-    { label: "Total Drives", value: drives.length, note: `${admins.length} Admin(s) active`, icon: "💼" }
+    { label: "Total Drives", value: drives.length, note: "Active campus drives", icon: "💼" }
   ];
 
   const handleTabSwitch = (tab) => {
@@ -187,27 +78,138 @@ function AdminDashboard({ defaultTab = "overview" }) {
     if (tab === "students") navigate("/admin/students");
   };
 
-  // Handlers
-  const handleCreateDrive = (e) => {
+  const handleCreateAdmin = async (e) => {
     e.preventDefault();
-    setDrives([{ id: Date.now(), ...driveForm }, ...drives]);
-    setDriveForm({
-      company: "",
-      role: "",
-      package: "",
-      location: "",
-      date: "",
-      criteria: "",
-      status: "Active"
-    });
-    setShowDriveModal(false);
+    if (adminForm.password !== adminForm.confirmPassword) {
+      setAdminError("Passwords do not match.");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/admin/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(adminForm)
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("New admin created successfully!");
+        setShowAdminModal(false);
+        setAdminForm({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+        setAdminError("");
+      } else {
+        setAdminError(data.message || "Failed to create admin.");
+      }
+    } catch (err) {
+      setAdminError("Network error connecting to backend server.");
+    }
   };
 
-  const handleCreateAdmin = (e) => {
+  const handleAddStudent = async (e) => {
     e.preventDefault();
-    setAdmins([...admins, { id: Date.now(), name: adminForm.name }]);
-    setAdminForm({ name: "", password: "" });
-    setShowAdminModal(false);
+    try {
+      const response = await fetch(`${API_BASE}/admin/students`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(studentForm)
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Student added successfully!");
+        setShowStudentModal(false);
+        fetchData();
+      } else {
+        alert(data.message || "Failed to add student.");
+      }
+    } catch (err) {
+      alert("Network error connecting to backend.");
+    }
+  };
+
+  const handleUpdateStudent = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/admin/students/${editStudentData.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editStudentData.name,
+          prn: editStudentData.prn,
+          email: editStudentData.email,
+          phone: editStudentData.phone,
+          address: editStudentData.address || "",
+          status: editStudentData.status,
+          company: editStudentData.company || "-",
+          tenth_marks: editStudentData.tenth_marks || "",
+          twelfth_marks: editStudentData.twelfth_marks || "",
+          degree_marks: editStudentData.degree_marks || "",
+          cmce_marks: editStudentData.cmce_marks || "",
+          ccee_marks: editStudentData.ccee_marks || ""
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Student updated successfully!");
+        setShowEditStudentModal(false);
+        fetchData();
+      } else {
+        alert(data.message || "Failed to update student.");
+      }
+    } catch (err) {
+      alert("Network error connecting to backend.");
+    }
+  };
+
+  const handleDeleteStudent = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this student?")) return;
+    try {
+      const response = await fetch(`${API_BASE}/admin/students/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Student deleted successfully!");
+        fetchData();
+      } else {
+        alert(data.message || "Failed to delete student.");
+      }
+    } catch (err) {
+      alert("Network error deleting student.");
+    }
+  };
+
+  const handleDeleteDrive = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this drive?")) return;
+    try {
+      const response = await fetch(`${API_BASE}/admin/drives/${id}`, { method: "DELETE" });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Drive deleted successfully!");
+        fetchData();
+      } else {
+        alert(data.message || "Failed to delete drive.");
+      }
+    } catch (err) {
+      alert("Network error deleting drive.");
+    }
+  };
+
+  const handleCreateDrive = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/admin/drives`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(driveForm)
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert("Drive created successfully!");
+        setShowDriveModal(false);
+        fetchData();
+      } else {
+        alert(data.message || "Failed to create drive.");
+      }
+    } catch (err) {
+      alert("Network error connecting to backend.");
+    }
   };
 
   const handleStudentPhotoUpload = (e) => {
@@ -221,33 +223,8 @@ function AdminDashboard({ defaultTab = "overview" }) {
     }
   };
 
-  const handleAddStudent = (e) => {
-    e.preventDefault();
-    const newStudent = {
-      ...studentForm,
-      company: studentForm.status === "Placed" ? "Placed" : "-"
-    };
-    setStudents([newStudent, ...students]);
-    setStudentForm({
-      photo: "",
-      name: "",
-      phone: "",
-      address: "",
-      prn: "",
-      password: "",
-      tenthMarks: "",
-      twelfthMarks: "",
-      degreeMarks: "",
-      cmceMarks: "",
-      cceeMarks: "",
-      status: "Unplaced"
-    });
-    setShowStudentModal(false);
-  };
-
   return (
     <AdminLayout>
-      {/* Top Heading + Quick Action Buttons (Create New Admin, Add Student, Menu Tabs) */}
       <div className="page-heading">
         <div>
           <p className="eyebrow">ADMIN PORTAL — CURRENT BATCH 2026</p>
@@ -257,55 +234,39 @@ function AdminDashboard({ defaultTab = "overview" }) {
             {activeTab === "students" && "All Registered Students"}
           </h1>
           <p className="page-subtitle">
-            Track placed & unplaced students, create campus drives, and manage student or admin accounts.
+            Track placed & unplaced students, create campus drives, and manage accounts.
           </p>
         </div>
 
-        <div className="header-actions-wrap">
-          <button
-            type="button"
-            className="action-btn secondary-action"
-            onClick={() => setShowAdminModal(true)}
+        <div className="header-actions-wrap" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            className="action-btn secondary-action" 
+            onClick={() => { setAdminError(""); setShowAdminModal(true); }}
+            style={{ cursor: 'pointer', zIndex: 10 }}
           >
             + Create New Admin
           </button>
-
-          <button
-            type="button"
-            className="action-btn primary-action"
+          <button 
+            type="button" 
+            className="action-btn primary-action" 
             onClick={() => setShowStudentModal(true)}
+            style={{ cursor: 'pointer', zIndex: 10 }}
           >
             + Add New Student
           </button>
 
           <div className="admin-menu-tabs">
-            <button
-              type="button"
-              className={`menu-tab-btn ${activeTab === "overview" ? "active" : ""}`}
-              onClick={() => handleTabSwitch("overview")}
-            >
-              Dashboard
-            </button>
-            <button
-              type="button"
-              className={`menu-tab-btn ${activeTab === "drives" ? "active" : ""}`}
-              onClick={() => handleTabSwitch("drives")}
-            >
-              Drives
-            </button>
-            <button
-              type="button"
-              className={`menu-tab-btn ${activeTab === "students" ? "active" : ""}`}
-              onClick={() => handleTabSwitch("students")}
-            >
-              Students
-            </button>
+            <button type="button" className={`menu-tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => handleTabSwitch("overview")}>Dashboard</button>
+            <button type="button" className={`menu-tab-btn ${activeTab === "drives" ? "active" : ""}`} onClick={() => handleTabSwitch("drives")}>Drives</button>
+            <button type="button" className={`menu-tab-btn ${activeTab === "students" ? "active" : ""}`} onClick={() => handleTabSwitch("students")}>Students</button>
           </div>
         </div>
       </div>
 
-      {/* DASHBOARD TAB: Placed and Unplaced Students from Current Batch */}
-      {activeTab === "overview" && (
+      {loading && <p>Loading portal data from database...</p>}
+
+      {!loading && activeTab === "overview" && (
         <>
           <section className="stats-grid">
             {stats.map((stat) => (
@@ -324,31 +285,13 @@ function AdminDashboard({ defaultTab = "overview" }) {
             <div className="panel-heading">
               <div>
                 <h2>Current Batch — Placed & Unplaced Students</h2>
-                <p>Filter between placed and unplaced students from the current CDAC batch</p>
+                <p>Filter between placed and unplaced students from database</p>
               </div>
 
               <div className="batch-filter-pills">
-                <button
-                  type="button"
-                  className={`filter-pill ${batchFilter === "all" ? "active" : ""}`}
-                  onClick={() => setBatchFilter("all")}
-                >
-                  All Batch ({students.length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill placed ${batchFilter === "Placed" ? "active" : ""}`}
-                  onClick={() => setBatchFilter("Placed")}
-                >
-                  Placed ({placedStudents.length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill unplaced ${batchFilter === "Unplaced" ? "active" : ""}`}
-                  onClick={() => setBatchFilter("Unplaced")}
-                >
-                  Unplaced ({unplacedStudents.length})
-                </button>
+                <button type="button" className={`filter-pill ${batchFilter === "all" ? "active" : ""}`} onClick={() => setBatchFilter("all")}>All Batch ({students.length})</button>
+                <button type="button" className={`filter-pill placed ${batchFilter === "Placed" ? "active" : ""}`} onClick={() => setBatchFilter("Placed")}>Placed ({placedStudents.length})</button>
+                <button type="button" className={`filter-pill unplaced ${batchFilter === "Unplaced" ? "active" : ""}`} onClick={() => setBatchFilter("Unplaced")}>Unplaced ({unplacedStudents.length})</button>
               </div>
             </div>
 
@@ -359,43 +302,34 @@ function AdminDashboard({ defaultTab = "overview" }) {
                     <th>Student</th>
                     <th>PRN No</th>
                     <th>Phone</th>
-                    <th>Degree %</th>
+                    <th>10th / 12th</th>
+                    <th>Degree</th>
                     <th>CMCE / CCEE</th>
-                    <th>Placement Status</th>
-                    <th>Company / Remarks</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBatchStudents.map((stu) => (
-                    <tr key={stu.prn}>
+                    <tr key={stu.id}>
                       <td>
                         <div className="student-name-cell">
-                          {stu.photo ? (
-                            <img src={stu.photo} alt={stu.name} className="table-avatar" />
-                          ) : (
-                            <span className="table-avatar-placeholder">
-                              {stu.name.charAt(0)}
-                            </span>
-                          )}
+                          {stu.photo ? <img src={stu.photo} alt={stu.name} className="table-avatar" /> : <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>}
                           <span className="company-cell">{stu.name}</span>
                         </div>
                       </td>
                       <td>{stu.prn}</td>
-                      <td>{stu.phone}</td>
-                      <td>{stu.degreeMarks}</td>
+                      <td>{stu.phone || "-"}</td>
+                      <td>{stu.tenth_marks || "-"} / {stu.twelfth_marks || "-"}</td>
+                      <td>{stu.degree_marks || "-"}</td>
+                      <td>{stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}</td>
                       <td>
-                        {stu.cmceMarks} / {stu.cceeMarks}
+                        <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>{stu.status}</span>
                       </td>
                       <td>
-                        <span
-                          className={`status-pill ${
-                            stu.status === "Placed" ? "active" : "pending"
-                          }`}
-                        >
-                          {stu.status}
-                        </span>
+                        <button onClick={() => { setEditStudentData(stu); setShowEditStudentModal(true); }} style={{ marginRight: '8px', padding: '4px 8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+                        <button onClick={() => handleDeleteStudent(stu.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                       </td>
-                      <td>{stu.company || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -405,21 +339,14 @@ function AdminDashboard({ defaultTab = "overview" }) {
         </>
       )}
 
-      {/* DRIVES TAB: Create Drive Button + Popup Form + List of All Drives */}
-      {activeTab === "drives" && (
+      {!loading && activeTab === "drives" && (
         <section className="content-panel">
           <div className="panel-heading">
             <div>
               <h2>All Placement Drives</h2>
-              <p>Create new campus drives and view all scheduled company drives</p>
+              <p>Active campus drives fetched from MySQL database</p>
             </div>
-            <button
-              type="button"
-              className="create-drive-btn"
-              onClick={() => setShowDriveModal(true)}
-            >
-              + Create Drive
-            </button>
+            <button type="button" className="create-drive-btn" onClick={() => setShowDriveModal(true)}>+ Create Drive</button>
           </div>
 
           <div className="table-wrap">
@@ -431,8 +358,10 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <th>Package</th>
                   <th>Location</th>
                   <th>Drive Date</th>
-                  <th>Eligibility Criteria</th>
+                  <th>Passout Year</th>
+                  <th>Criteria</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -442,12 +371,14 @@ function AdminDashboard({ defaultTab = "overview" }) {
                     <td>{drive.role}</td>
                     <td>{drive.package}</td>
                     <td>{drive.location}</td>
-                    <td>{drive.date}</td>
-                    <td>{drive.criteria}</td>
+                    <td>{drive.drive_date || "-"}</td>
+                    <td>{drive.passout_year || "-"}</td>
+                    <td>{drive.criteria || "-"}</td>
                     <td>
-                      <span className={`status-pill ${drive.status.toLowerCase()}`}>
-                        {drive.status}
-                      </span>
+                      <span className={`status-pill ${drive.status.toLowerCase()}`}>{drive.status}</span>
+                    </td>
+                    <td>
+                      <button onClick={() => handleDeleteDrive(drive.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -457,21 +388,14 @@ function AdminDashboard({ defaultTab = "overview" }) {
         </section>
       )}
 
-      {/* STUDENTS TAB: Full Students List + Add Student Button */}
-      {activeTab === "students" && (
+      {!loading && activeTab === "students" && (
         <section className="content-panel">
           <div className="panel-heading">
             <div>
               <h2>All Registered Students</h2>
-              <p>Complete student directory with 10th, 12th, Degree, CMCE & CCEE marks</p>
+              <p>Complete directory from database</p>
             </div>
-            <button
-              type="button"
-              className="create-drive-btn"
-              onClick={() => setShowStudentModal(true)}
-            >
-              + Add New Student
-            </button>
+            <button type="button" className="create-drive-btn" onClick={() => setShowStudentModal(true)}>+ Add New Student</button>
           </div>
 
           <div className="table-wrap">
@@ -481,46 +405,33 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <th>Student</th>
                   <th>PRN No</th>
                   <th>Phone</th>
-                  <th>Address</th>
                   <th>10th / 12th</th>
                   <th>Degree</th>
-                  <th>CMCE</th>
-                  <th>CCEE</th>
+                  <th>CMCE / CCEE</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((stu) => (
-                  <tr key={stu.prn}>
+                  <tr key={stu.id}>
                     <td>
                       <div className="student-name-cell">
-                        {stu.photo ? (
-                          <img src={stu.photo} alt={stu.name} className="table-avatar" />
-                        ) : (
-                          <span className="table-avatar-placeholder">
-                            {stu.name.charAt(0)}
-                          </span>
-                        )}
+                        {stu.photo ? <img src={stu.photo} alt={stu.name} className="table-avatar" /> : <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>}
                         <span className="company-cell">{stu.name}</span>
                       </div>
                     </td>
                     <td>{stu.prn}</td>
-                    <td>{stu.phone}</td>
-                    <td>{stu.address}</td>
+                    <td>{stu.phone || "-"}</td>
+                    <td>{stu.tenth_marks || "-"} / {stu.twelfth_marks || "-"}</td>
+                    <td>{stu.degree_marks || "-"}</td>
+                    <td>{stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}</td>
                     <td>
-                      {stu.tenthMarks} / {stu.twelfthMarks}
+                      <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>{stu.status}</span>
                     </td>
-                    <td>{stu.degreeMarks}</td>
-                    <td>{stu.cmceMarks}</td>
-                    <td>{stu.cceeMarks}</td>
                     <td>
-                      <span
-                        className={`status-pill ${
-                          stu.status === "Placed" ? "active" : "pending"
-                        }`}
-                      >
-                        {stu.status}
-                      </span>
+                      <button onClick={() => { setEditStudentData(stu); setShowEditStudentModal(true); }} style={{ marginRight: '8px', padding: '4px 8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
+                      <button onClick={() => handleDeleteStudent(stu.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -530,391 +441,263 @@ function AdminDashboard({ defaultTab = "overview" }) {
         </section>
       )}
 
-      {/* MODAL 1: CREATE NEW ADMIN POPUP (Name, Create Password) */}
+      {/* EDIT STUDENT MODAL */}
+      {showEditStudentModal && editStudentData && (
+        <div className="modal-backdrop" onClick={() => setShowEditStudentModal(false)}>
+          <div className="modal-box student-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Student Record</h3>
+              <button type="button" className="close-modal-btn" onClick={() => setShowEditStudentModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleUpdateStudent} className="drive-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Full Name</label>
+                  <input type="text" required value={editStudentData.name} onChange={(e) => setEditStudentData({ ...editStudentData, name: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>PRN No</label>
+                  <input type="text" required value={editStudentData.prn} onChange={(e) => setEditStudentData({ ...editStudentData, prn: e.target.value })} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input type="email" required value={editStudentData.email} onChange={(e) => setEditStudentData({ ...editStudentData, email: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input type="tel" required value={editStudentData.phone} onChange={(e) => setEditStudentData({ ...editStudentData, phone: e.target.value })} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Address</label>
+                <input type="text" value={editStudentData.address || ""} onChange={(e) => setEditStudentData({ ...editStudentData, address: e.target.value })} />
+              </div>
+              <div className="form-row three-col">
+                <div className="form-group">
+                  <label>10th Marks (%)</label>
+                  <input type="text" value={editStudentData.tenth_marks || ""} onChange={(e) => setEditStudentData({ ...editStudentData, tenth_marks: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>12th Marks (%)</label>
+                  <input type="text" value={editStudentData.twelfth_marks || ""} onChange={(e) => setEditStudentData({ ...editStudentData, twelfth_marks: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Degree Marks (%)</label>
+                  <input type="text" value={editStudentData.degree_marks || ""} onChange={(e) => setEditStudentData({ ...editStudentData, degree_marks: e.target.value })} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>CMCE Marks</label>
+                  <input type="text" value={editStudentData.cmce_marks || ""} onChange={(e) => setEditStudentData({ ...editStudentData, cmce_marks: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>CCEE Marks</label>
+                  <input type="text" value={editStudentData.ccee_marks || ""} onChange={(e) => setEditStudentData({ ...editStudentData, ccee_marks: e.target.value })} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Status</label>
+                  <select value={editStudentData.status} onChange={(e) => setEditStudentData({ ...editStudentData, status: e.target.value })}>
+                    <option value="Unplaced">Unplaced</option>
+                    <option value="Placed">Placed</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Placed Company</label>
+                  <input type="text" value={editStudentData.company || ""} onChange={(e) => setEditStudentData({ ...editStudentData, company: e.target.value })} />
+                </div>
+              </div>
+              <div className="modal-actions" style={{ marginTop: '1rem' }}>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditStudentModal(false)}>Cancel</button>
+                <button type="submit" className="submit-drive-btn">Update Student</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE ADMIN MODAL */}
       {showAdminModal && (
         <div className="modal-backdrop" onClick={() => setShowAdminModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create New Admin</h3>
-              <button
-                type="button"
-                className="close-modal-btn"
-                onClick={() => setShowAdminModal(false)}
-              >
-                ✕
-              </button>
+              <button type="button" className="close-modal-btn" onClick={() => setShowAdminModal(false)}>✕</button>
             </div>
-
+            {adminError && <div style={{ marginBottom: '12px', padding: '10px', background: '#fff0f0', color: '#a32626', borderRadius: '7px', fontSize: '12px', fontWeight: 600 }}>{adminError}</div>}
             <form onSubmit={handleCreateAdmin} className="drive-form">
               <div className="form-group">
                 <label>Admin Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter admin full name"
-                  value={adminForm.name}
-                  onChange={(e) =>
-                    setAdminForm({ ...adminForm, name: e.target.value })
-                  }
-                />
+                <input type="text" required placeholder="Enter admin full name" value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} />
               </div>
-
-              <div className="form-group">
-                <label>Create Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Create password for admin"
-                  value={adminForm.password}
-                  onChange={(e) =>
-                    setAdminForm({ ...adminForm, password: e.target.value })
-                  }
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email Address</label>
+                  <input type="email" required placeholder="admin@cdac.gov.in" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input type="tel" required placeholder="9890123456" value={adminForm.phone} onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })} />
+                </div>
               </div>
-
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Password</label>
+                  <input type="password" required placeholder="Password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Confirm Password</label>
+                  <input type="password" required placeholder="Confirm Password" value={adminForm.confirmPassword} onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })} />
+                </div>
+              </div>
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowAdminModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="submit-drive-btn">
-                  Create Admin
-                </button>
+                <button type="button" className="cancel-btn" onClick={() => setShowAdminModal(false)}>Cancel</button>
+                <button type="submit" className="submit-drive-btn">Create Admin</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL 2: ADD NEW STUDENT POPUP (Photo, Name, Phone, Address, PRN, Password, 10th, 12th, Degree, CMCE, CCEE) */}
+      {/* ADD STUDENT MODAL */}
       {showStudentModal && (
         <div className="modal-backdrop" onClick={() => setShowStudentModal(false)}>
-          <div
-            className="modal-box student-modal-box"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-box student-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add New Student</h3>
-              <button
-                type="button"
-                className="close-modal-btn"
-                onClick={() => setShowStudentModal(false)}
-              >
-                ✕
-              </button>
+              <button type="button" className="close-modal-btn" onClick={() => setShowStudentModal(false)}>✕</button>
             </div>
-
             <form onSubmit={handleAddStudent} className="drive-form">
               <div className="form-row">
                 <div className="form-group">
                   <label>Student Photo</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleStudentPhotoUpload}
-                  />
+                  <input type="file" accept="image/*" onChange={handleStudentPhotoUpload} style={{ padding: '6px' }} />
                 </div>
-
                 <div className="form-group">
                   <label>Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter student name"
-                    value={studentForm.name}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, name: e.target.value })
-                    }
-                  />
+                  <input type="text" required placeholder="Enter student name" value={studentForm.name} onChange={(e) => setStudentForm({ ...studentForm, name: e.target.value })} />
                 </div>
               </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label>PRN No</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. CDAC2026006"
-                    value={studentForm.prn}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, prn: e.target.value })
-                    }
-                  />
+                  <input type="text" required placeholder="e.g. CDAC2026001" value={studentForm.prn} onChange={(e) => setStudentForm({ ...studentForm, prn: e.target.value })} />
                 </div>
-
                 <div className="form-group">
-                  <label>Password</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Create student password"
-                    value={studentForm.password}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, password: e.target.value })
-                    }
-                  />
+                  <label>Email Address</label>
+                  <input type="email" required placeholder="student@cdac.in" value={studentForm.email} onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })} />
                 </div>
               </div>
-
               <div className="form-row">
                 <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. 9876543210"
-                    value={studentForm.phone}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, phone: e.target.value })
-                    }
-                  />
+                  <label>Password</label>
+                  <input type="password" required placeholder="Student password" value={studentForm.password} onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })} />
                 </div>
-
                 <div className="form-group">
-                  <label>Placement Status</label>
-                  <select
-                    value={studentForm.status}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, status: e.target.value })
-                    }
-                  >
-                    <option value="Unplaced">Unplaced</option>
-                    <option value="Placed">Placed</option>
-                  </select>
+                  <label>Phone Number</label>
+                  <input type="tel" required placeholder="9876543210" value={studentForm.phone} onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })} />
                 </div>
               </div>
-
               <div className="form-group">
                 <label>Student Address</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter full residential address"
-                  value={studentForm.address}
-                  onChange={(e) =>
-                    setStudentForm({ ...studentForm, address: e.target.value })
-                  }
-                />
+                <input type="text" required placeholder="Enter residential address" value={studentForm.address} onChange={(e) => setStudentForm({ ...studentForm, address: e.target.value })} />
               </div>
-
               <div className="form-row three-col">
                 <div className="form-group">
                   <label>10th Marks (%)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 82%"
-                    value={studentForm.tenthMarks}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, tenthMarks: e.target.value })
-                    }
-                  />
+                  <input type="text" placeholder="82%" value={studentForm.tenthMarks} onChange={(e) => setStudentForm({ ...studentForm, tenthMarks: e.target.value })} />
                 </div>
-
                 <div className="form-group">
                   <label>12th Marks (%)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 78%"
-                    value={studentForm.twelfthMarks}
-                    onChange={(e) =>
-                      setStudentForm({
-                        ...studentForm,
-                        twelfthMarks: e.target.value
-                      })
-                    }
-                  />
+                  <input type="text" placeholder="78%" value={studentForm.twelfthMarks} onChange={(e) => setStudentForm({ ...studentForm, twelfthMarks: e.target.value })} />
                 </div>
-
                 <div className="form-group">
                   <label>Degree Marks (%)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 75%"
-                    value={studentForm.degreeMarks}
-                    onChange={(e) =>
-                      setStudentForm({
-                        ...studentForm,
-                        degreeMarks: e.target.value
-                      })
-                    }
-                  />
+                  <input type="text" placeholder="75%" value={studentForm.degreeMarks} onChange={(e) => setStudentForm({ ...studentForm, degreeMarks: e.target.value })} />
                 </div>
               </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label>CMCE Marks</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 80"
-                    value={studentForm.cmceMarks}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, cmceMarks: e.target.value })
-                    }
-                  />
+                  <input type="text" placeholder="80" value={studentForm.cmceMarks} onChange={(e) => setStudentForm({ ...studentForm, cmceMarks: e.target.value })} />
                 </div>
-
                 <div className="form-group">
                   <label>CCEE Marks</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 85"
-                    value={studentForm.cceeMarks}
-                    onChange={(e) =>
-                      setStudentForm({ ...studentForm, cceeMarks: e.target.value })
-                    }
-                  />
+                  <input type="text" placeholder="85" value={studentForm.cceeMarks} onChange={(e) => setStudentForm({ ...studentForm, cceeMarks: e.target.value })} />
                 </div>
               </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowStudentModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="submit-drive-btn">
-                  Save Student
-                </button>
+              <div className="modal-actions" style={{ marginTop: '8px' }}>
+                <button type="button" className="cancel-btn" onClick={() => setShowStudentModal(false)}>Cancel</button>
+                <button type="submit" className="submit-drive-btn">Save Student</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL 3: CREATE DRIVE POPUP */}
+      {/* CREATE DRIVE MODAL */}
       {showDriveModal && (
         <div className="modal-backdrop" onClick={() => setShowDriveModal(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create New Placement Drive</h3>
-              <button
-                type="button"
-                className="close-modal-btn"
-                onClick={() => setShowDriveModal(false)}
-              >
-                ✕
-              </button>
+              <button type="button" className="close-modal-btn" onClick={() => setShowDriveModal(false)}>✕</button>
             </div>
-
             <form onSubmit={handleCreateDrive} className="drive-form">
-              <div className="form-group">
-                <label>Company Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. TCS, Infosys"
-                  value={driveForm.company}
-                  onChange={(e) =>
-                    setDriveForm({ ...driveForm, company: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Job Role</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Java Developer"
-                  value={driveForm.role}
-                  onChange={(e) =>
-                    setDriveForm({ ...driveForm, role: e.target.value })
-                  }
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Company Name</label>
+                  <input type="text" required placeholder="e.g. TCS" value={driveForm.company} onChange={(e) => setDriveForm({ ...driveForm, company: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Job Role</label>
+                  <input type="text" required placeholder="e.g. Software Engineer" value={driveForm.role} onChange={(e) => setDriveForm({ ...driveForm, role: e.target.value })} />
+                </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label>Package (CTC)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 7.0 LPA"
-                    value={driveForm.package}
-                    onChange={(e) =>
-                      setDriveForm({ ...driveForm, package: e.target.value })
-                    }
-                  />
+                  <input type="text" required placeholder="e.g. 7.0 LPA" value={driveForm.package} onChange={(e) => setDriveForm({ ...driveForm, package: e.target.value })} />
                 </div>
-
-                <div className="form-group">
+                <div className="query-group form-group">
                   <label>Location</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Pune"
-                    value={driveForm.location}
-                    onChange={(e) =>
-                      setDriveForm({ ...driveForm, location: e.target.value })
-                    }
-                  />
+                  <input type="text" required placeholder="e.g. Jabalpur / Pune" value={driveForm.location} onChange={(e) => setDriveForm({ ...driveForm, location: e.target.value })} />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label>Drive Date</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 28 Nov 2026"
-                    value={driveForm.date}
-                    onChange={(e) =>
-                      setDriveForm({ ...driveForm, date: e.target.value })
-                    }
-                  />
+                  <input type="text" required placeholder="e.g. 20 Nov 2026" value={driveForm.drive_date} onChange={(e) => setDriveForm({ ...driveForm, drive_date: e.target.value })} />
                 </div>
+                <div className="form-group">
+                  <label>Passout Year</label>
+                  <input type="text" required placeholder="2026" value={driveForm.passout_year} onChange={(e) => setDriveForm({ ...driveForm, passout_year: e.target.value })} />
+                </div>
+              </div>
 
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Eligibility Criteria</label>
+                  <input type="text" required placeholder="e.g. 60% throughout" value={driveForm.criteria} onChange={(e) => setDriveForm({ ...driveForm, criteria: e.target.value })} />
+                </div>
                 <div className="form-group">
                   <label>Status</label>
-                  <select
-                    value={driveForm.status}
-                    onChange={(e) =>
-                      setDriveForm({ ...driveForm, status: e.target.value })
-                    }
-                  >
+                  <select value={driveForm.status} onChange={(e) => setDriveForm({ ...driveForm, status: e.target.value })}>
                     <option value="Active">Active</option>
                     <option value="Pending">Pending</option>
                   </select>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Eligibility Criteria</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 60% throughout academics, No backlogs"
-                  value={driveForm.criteria}
-                  onChange={(e) =>
-                    setDriveForm({ ...driveForm, criteria: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="cancel-btn"
-                  onClick={() => setShowDriveModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="submit-drive-btn">
-                  Save Drive
-                </button>
+              <div className="modal-actions" style={{ marginTop: '1rem' }}>
+                <button type="button" className="cancel-btn" onClick={() => setShowDriveModal(false)}>Cancel</button>
+                <button type="submit" className="submit-drive-btn">Save Drive</button>
               </div>
             </form>
           </div>
