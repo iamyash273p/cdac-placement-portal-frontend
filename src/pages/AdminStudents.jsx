@@ -3,12 +3,27 @@ import AdminLayout from '../layouts/AdminLayout';
 
 const API_BASE = 'http://localhost:7500/api';
 
+const studentMarkFields = [
+  ['tenth_marks', '10th Marks (%)'],
+  ['twelfth_marks', '12th Marks (%)'],
+  ['degree_marks', 'Degree Marks (%)'],
+  ['cmce_marks', 'CMCE Marks (%)'],
+  ['ccee_marks', 'CCEE Marks (%)']
+];
+
+const normalizeMarkInput = (value) => {
+  const match = String(value ?? '').match(/^\s*(\d+(?:\.\d+)?)/);
+  return match ? match[1] : '';
+};
+
 export default function AdminStudents() {
   const [students, setStudents] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [savingStudent, setSavingStudent] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,25 +57,42 @@ export default function AdminStudents() {
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    const res = await fetch(`${API_BASE}/admin/students`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(studentForm)
-    });
-    const data = await res.json();
-    if (data.success) {
+    setSavingStudent(true);
+    setFormError('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/students`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...studentForm,
+          tenthMarks: studentForm.tenth_marks,
+          twelfthMarks: studentForm.twelfth_marks,
+          degreeMarks: studentForm.degree_marks,
+          cmceMarks: studentForm.cmce_marks,
+          cceeMarks: studentForm.ccee_marks
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setFormError(data.message || 'Unable to add student.');
+        return;
+      }
+      await fetchStudents();
       setShowAddModal(false);
       setStudentForm({
         name: '', prn: '', email: '', password: '', phone: '', status: 'Unplaced',
         tenth_marks: '', twelfth_marks: '', degree_marks: '', postgrad_marks: '', cmce_marks: '', ccee_marks: ''
       });
-      fetchStudents();
-    } else {
-      alert(data.message);
+    } catch (err) {
+      console.error('Error adding student:', err);
+      setFormError('Unable to connect to the server. Please try again.');
+    } finally {
+      setSavingStudent(false);
     }
   };
 
   const openEditModal = (stu) => {
+    setFormError('');
     setEditStudentId(stu.id);
     setStudentForm({
       name: stu.name || '',
@@ -69,30 +101,39 @@ export default function AdminStudents() {
       password: '',
       phone: stu.phone || '',
       status: stu.status || 'Unplaced',
-      tenth_marks: stu.tenth_marks || '',
-      twelfth_marks: stu.twelfth_marks || '',
-      degree_marks: stu.degree_marks || '',
+      tenth_marks: normalizeMarkInput(stu.tenth_marks),
+      twelfth_marks: normalizeMarkInput(stu.twelfth_marks),
+      degree_marks: normalizeMarkInput(stu.degree_marks),
       postgrad_marks: '',
-      cmce_marks: stu.cmce_marks || '',
-      ccee_marks: stu.ccee_marks || ''
+      cmce_marks: normalizeMarkInput(stu.cmce_marks),
+      ccee_marks: normalizeMarkInput(stu.ccee_marks)
     });
     setShowEditModal(true);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const res = await fetch(`${API_BASE}/admin/students/${editStudentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(studentForm)
-    });
-    const data = await res.json();
-    if (data.success) {
+    setSavingStudent(true);
+    setFormError('');
+    try {
+      const res = await fetch(`${API_BASE}/admin/students/${editStudentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(studentForm)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setFormError(data.message || 'Unable to update student.');
+        return;
+      }
+      await fetchStudents();
       setShowEditModal(false);
       setEditStudentId(null);
-      fetchStudents();
-    } else {
-      alert(data.message);
+    } catch (err) {
+      console.error('Error updating student:', err);
+      setFormError('Unable to connect to the server. Please try again.');
+    } finally {
+      setSavingStudent(false);
     }
   };
 
@@ -166,6 +207,7 @@ export default function AdminStudents() {
             <button
               onClick={() => {
                 setStudentForm({ name: '', prn: '', email: '', password: '', phone: '', status: 'Unplaced', tenth_marks: '', twelfth_marks: '', degree_marks: '', postgrad_marks: '', cmce_marks: '', ccee_marks: '' });
+                setFormError('');
                 setShowAddModal(true);
               }}
               style={{ background: '#1e3a8a', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}
@@ -183,6 +225,7 @@ export default function AdminStudents() {
                 <th style={{ padding: '12px' }}>Student</th>
                 <th style={{ padding: '12px' }}>Email</th>
                 <th style={{ padding: '12px' }}>PRN No</th>
+                <th style={{ padding: '12px' }}>Role</th>
                 <th style={{ padding: '12px' }}>Status</th>
                 <th style={{ padding: '12px' }}>Calls Left</th>
                 <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
@@ -198,6 +241,7 @@ export default function AdminStudents() {
                     <td style={{ padding: '12px', fontWeight: 600 }}>{stu.name}</td>
                     <td style={{ padding: '12px' }}>{stu.email}</td>
                     <td style={{ padding: '12px' }}>{stu.prn}</td>
+                    <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>{stu.role ? stu.role.charAt(0).toUpperCase() + stu.role.slice(1) : 'Student'}</td>
                     <td style={{ padding: '12px' }}>{stu.status}</td>
                     <td style={{ padding: '12px', fontWeight: 600, color: '#1d4ed8' }}>{left} / {totalCalls}</td>
                     <td style={{ padding: '12px', textAlign: 'right' }}>
@@ -241,7 +285,76 @@ export default function AdminStudents() {
           </div>
         </div>
 
-        {/* Modals remain the same... */}
+        {(showAddModal || showEditModal) && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
+            <form
+              onSubmit={showEditModal ? handleUpdate : handleAdd}
+              style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '520px', maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>
+                {showEditModal ? 'Edit Student' : 'Add New Student'}
+              </h2>
+              {formError && <p role="alert" style={{ color: '#b91c1c', margin: 0, fontSize: '13px' }}>{formError}</p>}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {[
+                  ['name', 'Full Name', true],
+                  ['prn', 'PRN Number', true],
+                  ['email', 'Email Address', true],
+                  ['phone', 'Phone Number', false],
+                  ...studentMarkFields
+                ].map(([field, label, required]) => (
+                  <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
+                    {label}{required ? ' *' : ''}
+                    <input
+                      type={field === 'email' ? 'email' : studentMarkFields.some(([markField]) => markField === field) ? 'number' : 'text'}
+                      min={studentMarkFields.some(([markField]) => markField === field) ? '0' : undefined}
+                      max={studentMarkFields.some(([markField]) => markField === field) ? '100' : undefined}
+                      step={studentMarkFields.some(([markField]) => markField === field) ? '0.01' : undefined}
+                      required={required}
+                      value={studentForm[field]}
+                      onChange={(e) => setStudentForm({ ...studentForm, [field]: e.target.value })}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a' }}
+                    />
+                  </label>
+                ))}
+                {!showEditModal && (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
+                    Password *
+                    <input
+                      type="password"
+                      required
+                      value={studentForm.password}
+                      onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a' }}
+                    />
+                  </label>
+                )}
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
+                  Placement Status
+                  <select
+                    value={studentForm.status}
+                    onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a', background: '#fff' }}
+                  >
+                    <option value="Unplaced">Unplaced</option>
+                    <option value="Placed">Placed</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                <button type="button" onClick={() => { setShowAddModal(false); setShowEditModal(false); setFormError(''); }} style={{ padding: '9px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '7px', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={savingStudent} style={{ padding: '9px 14px', background: savingStudent ? '#64748b' : '#1e3a8a', color: '#fff', border: 'none', borderRadius: '7px', cursor: savingStudent ? 'wait' : 'pointer', fontWeight: 600 }}>
+                  {savingStudent ? 'Saving...' : showEditModal ? 'Save Changes' : 'Add Student'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {showCsvModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <form onSubmit={handleCsvUpload} style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '440px', display: 'flex', flexDirection: 'column', gap: '12px' }}>

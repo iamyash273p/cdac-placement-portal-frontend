@@ -6,6 +6,7 @@ function Navbar({
   title,
   links,
   showLogin = false,
+  showProfile = true,
   onLogout,
   userProfile,
   onSaveProfile
@@ -14,9 +15,9 @@ function Navbar({
   const [showEditModal, setShowEditModal] = useState(false);
   const [formData, setFormData] = useState(
     userProfile || {
-      name: "Student",
-      email: "student@cdac.in",
-      phone: "9876543210",
+      name: "",
+      email: "",
+      phone: "",
       photo: ""
     }
   );
@@ -69,64 +70,66 @@ function Navbar({
           ))}
         </div>
 
-        <div className="portal-nav-actions">
-          <div className="profile-dropdown-wrap">
-            <button
-              type="button"
-              className="profile-trigger-btn"
-              onClick={() => setDropdownOpen((prev) => !prev)}
-            >
-              {formData.photo ? (
-                <img src={formData.photo} alt="Profile" className="nav-profile-img" />
-              ) : (
-                <span className="nav-profile-avatar">
-                  {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
-                </span>
-              )}
-              <span>{formData.name || "Profile"} ▾</span>
-            </button>
-
-            {dropdownOpen && (
-              <div className="profile-dropdown-menu">
-                <div className="dropdown-user-summary">
-                  <strong>{formData.name}</strong>
-                  <span>{formData.email}</span>
-                  <span>📞 {formData.phone}</span>
-                </div>
-                <button
-                  type="button"
-                  className="dropdown-item-btn"
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    setShowEditModal(true);
-                  }}
-                >
-                  ✏️ Edit Profile
-                </button>
-                {showLogin ? (
-                  <NavLink
-                    to="/login"
-                    className="dropdown-item-link"
-                    onClick={() => setDropdownOpen(false)}
-                  >
-                    🔑 Login
-                  </NavLink>
+        {showProfile && (
+          <div className="portal-nav-actions">
+            <div className="profile-dropdown-wrap">
+              <button
+                type="button"
+                className="profile-trigger-btn"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+              >
+                {formData.photo ? (
+                  <img src={formData.photo} alt="Profile" className="nav-profile-img" />
                 ) : (
+                  <span className="nav-profile-avatar">
+                    {formData.name ? formData.name.charAt(0).toUpperCase() : "U"}
+                  </span>
+                )}
+                <span>{formData.name || "Profile"} ▾</span>
+              </button>
+
+              {dropdownOpen && (
+                <div className="profile-dropdown-menu">
+                  <div className="dropdown-user-summary">
+                    {formData.name && <strong>{formData.name}</strong>}
+                    {formData.email && <span>{formData.email}</span>}
+                    {formData.phone && <span>📞 {formData.phone}</span>}
+                  </div>
                   <button
                     type="button"
-                    className="dropdown-item-btn danger"
+                    className="dropdown-item-btn"
                     onClick={() => {
                       setDropdownOpen(false);
-                      if (onLogout) onLogout();
+                      setShowEditModal(true);
                     }}
                   >
-                    🚪 Logout
+                    ✏️ Edit Profile
                   </button>
-                )}
-              </div>
-            )}
+                  {showLogin ? (
+                    <NavLink
+                      to="/login"
+                      className="dropdown-item-link"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      🔑 Login
+                    </NavLink>
+                  ) : (
+                    <button
+                      type="button"
+                      className="dropdown-item-btn danger"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        if (onLogout) onLogout();
+                      }}
+                    >
+                      🚪 Logout
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
       {showEditModal && (
@@ -184,27 +187,27 @@ function Navbar({
   );
 }
 
-export function StudentNavbar({ onLogout }) {
+export function StudentNavbar({ onLogout, showProfile = true }) {
   const navigate = useNavigate();
+  const hasStudentSession =
+    Boolean(localStorage.getItem("token")) &&
+    localStorage.getItem("role")?.toLowerCase() === "student";
   const [studentProfile, setStudentProfile] = useState(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      return {
-        name: parsed.name || "Student",
-        email: parsed.email || "student.dac@cdac.in",
-        phone: parsed.phone || "+91 9876543210",
-        photo: parsed.photo || ""
-      };
-    }
-    return { name: "Student", email: "student.dac@cdac.in", phone: "+91 9876543210", photo: "" };
+    const parsed = JSON.parse(localStorage.getItem("user") || "{}");
+    return {
+      name: parsed.name || "",
+      email: parsed.email || "",
+      phone: parsed.phone || "",
+      photo: parsed.photo || ""
+    };
   });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("role");
     if (onLogout) onLogout();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const handleSaveProfile = (updatedProfile) => {
@@ -220,18 +223,17 @@ export function StudentNavbar({ onLogout }) {
       userProfile={studentProfile}
       onSaveProfile={handleSaveProfile}
       links={[
-        { name: "Student Dashboard", path: "/student-dashboard" },
+        { name: "Home", path: "/student-dashboard" },
         { name: "About Us", path: "/about" },
-        { name: "Contact Us", path: "/contact" },
-        { name: "Admin Portal", path: "/admin" }
+        { name: "Contact Us", path: "/contact" }
       ]}
       showLogin={false}
+      showProfile={showProfile && hasStudentSession}
     />
   );
 }
 
-export function PublicNavbar() {
-  const navigate = useNavigate();
+export function PublicNavbar({ showLoginLink = true }) {
   const token = localStorage.getItem("token");
 
   if (token) {
@@ -244,29 +246,32 @@ export function PublicNavbar() {
       links={[
         { name: "Home", path: "/" },
         { name: "About Us", path: "/about" },
-        { name: "Contact Us", path: "/contact" }
+        { name: "Contact Us", path: "/contact" },
+        ...(showLoginLink ? [{ name: "Login", path: "/login" }] : [])
       ]}
-      showLogin={true}
-      userProfile={{ name: "Visitor", email: "Guest", phone: "-", photo: "" }}
-      onLogout={() => navigate("/login")}
+      showProfile={false}
     />
   );
 }
 
 export function AdminNavbar({ onLogout }) {
   const navigate = useNavigate();
-  const [adminProfile, setAdminProfile] = useState({
-    name: "Placement Officer",
-    email: "officer@cdac.in",
-    phone: "+91 9890123456",
-    photo: ""
+  const [adminProfile, setAdminProfile] = useState(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    return {
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      photo: user.photo || ""
+    };
   });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("role");
     if (onLogout) onLogout();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -276,10 +281,9 @@ export function AdminNavbar({ onLogout }) {
       userProfile={adminProfile}
       onSaveProfile={setAdminProfile}
       links={[
-        { name: "Dashboard", path: "/admin" },
+        { name: "Home", path: "/admin" },
         { name: "Drives", path: "/admin/drives" },
-        { name: "Students", path: "/admin/students" },
-        { name: "Student View", path: "/student-dashboard" }
+        { name: "Students", path: "/admin/students" }
       ]}
       showLogin={false}
     />

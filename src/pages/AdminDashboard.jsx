@@ -1,8 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 import './AdminDashboard.css';
+import { formatDriveDate } from '../utils/driveDates';
 
 const API_BASE = 'http://localhost:7500/api';
+const minimumMarkFields = [
+  ['min_tenth_marks', '10th (%)'],
+  ['min_twelfth_marks', '12th (%)'],
+  ['min_degree_marks', 'Degree (%)'],
+  ['min_cmce_marks', 'CMCE (%)'],
+  ['min_ccee_marks', 'CCEE (%)']
+];
+
+const hasAutomaticDriveCriteria = (drive) => minimumMarkFields.some(([field]) =>
+  drive[field] !== null && drive[field] !== undefined && drive[field] !== ''
+);
+
+const isAutomaticShortlist = (drive) =>
+  drive.shortlist_mode !== 'manual' && hasAutomaticDriveCriteria(drive);
 
 export default function AdminDashboard({ initialTab = 'dashboard' }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -251,10 +266,19 @@ export default function AdminDashboard({ initialTab = 'dashboard' }) {
                 <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 700 }}>{drv.company}</h3>
                 <p style={{ margin: '0 0 12px', fontSize: '14px', color: '#2563eb', fontWeight: 600 }}>{drv.role}</p>
                 <div style={{ fontSize: '13px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
-                  <div>💰 <strong>Package:</strong> {drv.package}</div>
+                  <div>💰 <strong>Package:</strong> {/lpa/i.test(String(drv.package)) ? drv.package : `${drv.package} LPA`}</div>
                   <div>📍 <strong>Location:</strong> {drv.location}</div>
-                  <div>📅 <strong>Date:</strong> {drv.drive_date}</div>
-                  <div>👥 <strong>Shortlisted:</strong> {drv.shortlisted_count || 0} student(s)</div>
+                  <div>📅 <strong>Date:</strong> {formatDriveDate(drv.drive_date)}</div>
+                  {drv.deadline_date && <div>⏳ <strong>Application Deadline:</strong> {formatDriveDate(drv.deadline_date)}</div>}
+                  {hasAutomaticDriveCriteria(drv) && (
+                    <div>
+                      🎓 <strong>Minimum Marks:</strong>{' '}
+                      {minimumMarkFields
+                        .filter(([field]) => drv[field] !== null && drv[field] !== undefined && drv[field] !== '')
+                        .map(([field, label]) => `${label} ${drv[field]}`)
+                        .join(' · ')}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={() => openShortlistModal(drv)} style={{ flex: 1, background: '#1e3a8a', color: '#fff', border: 'none', padding: '9px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>
@@ -332,7 +356,7 @@ export default function AdminDashboard({ initialTab = 'dashboard' }) {
                       <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>{adm.name}</td>
                       <td style={{ padding: '12px', color: '#475569' }}>{adm.email}</td>
                       <td style={{ padding: '12px', color: '#475569' }}>{adm.phone || '-'}</td>
-                      <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>Placement Officer</td>
+                      <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>{adm.role || '-'}</td>
                       <td style={{ padding: '12px', textAlign: 'right' }}>
                         <button onClick={() => handleDeleteAdmin(adm.id)} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
                           Delete
@@ -396,12 +420,18 @@ export default function AdminDashboard({ initialTab = 'dashboard' }) {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <div style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
               <h3>Shortlist for {selectedDriveForShortlist.company}</h3>
+              {isAutomaticShortlist(selectedDriveForShortlist) && (
+                <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '13px' }}>
+                  Students meeting all minimum marks are shortlisted automatically.
+                </p>
+              )}
               <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', margin: '12px 0' }}>
                 {students.map((stu) => (
                   <label key={stu.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={shortlistedIds.includes(stu.id)}
+                      disabled={isAutomaticShortlist(selectedDriveForShortlist)}
                       onChange={() => setShortlistedIds(prev => prev.includes(stu.id) ? prev.filter(id => id !== stu.id) : [...prev, stu.id])}
                     />
                     <span style={{ fontWeight: 600 }}>{stu.name}</span> ({stu.prn})
@@ -410,7 +440,9 @@ export default function AdminDashboard({ initialTab = 'dashboard' }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button onClick={() => setSelectedDriveForShortlist(null)} style={{ padding: '8px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={saveShortlist} style={{ padding: '8px 14px', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Save Shortlist</button>
+                {!isAutomaticShortlist(selectedDriveForShortlist) && (
+                  <button onClick={saveShortlist} style={{ padding: '8px 14px', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Save Shortlist</button>
+                )}
               </div>
             </div>
           </div>

@@ -1,25 +1,23 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { PublicNavbar } from "../components/Navbar/Navbar";
 import { API_BASE } from "../services/api";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
-  const [loginType, setLoginType] = useState("student");
-  const [email, setEmail] = useState("");
+  const [redirectTo] = useState(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role")?.toLowerCase();
+
+    if (token && role === "admin") return "/admin";
+    if (token && role === "student") return "/student-dashboard";
+    return null;
+  });
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const isStudent = loginType === "student";
-
-  function switchLoginType() {
-    setLoginType(isStudent ? "admin" : "student");
-    setEmail("");
-    setPassword("");
-    setMessage("");
-  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -30,21 +28,32 @@ function Login() {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ identifier, password })
       });
       const data = await response.json();
 
       if (response.ok && data.success) {
+        const role = typeof data.role === "string" ? data.role.toLowerCase() : "";
+        if (role !== "admin" && role !== "student") {
+          setMessage("Unable to determine account type. Please contact support.");
+          return;
+        }
+
         setMessage("Login successful! Redirecting...");
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("role", data.role);
+        localStorage.setItem("role", role);
 
+        // Use replace: true so the login screen is replaced in history
         setTimeout(() => {
-          navigate(data.role === "admin" || !isStudent ? "/admin" : "/student-dashboard");
+          if (role === "admin") {
+            navigate("/admin", { replace: true });
+          } else {
+            navigate("/student-dashboard", { replace: true });
+          }
         }, 700);
       } else {
-        setMessage(data.message || "Invalid email or password.");
+        setMessage(data.message || "Invalid email/PRN or password.");
       }
     } catch (err) {
       setMessage("Network error. Make sure backend server is running on port 7500.");
@@ -53,43 +62,35 @@ function Login() {
     }
   }
 
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
   return (
     <div className="admin-register-page">
-      <PublicNavbar />
+      <PublicNavbar showLoginLink={false} />
       <main className="admin-register-main">
         <section className="admin-register-card login-card">
           <div className="admin-register-heading">
-            <div className="admin-register-icon" aria-hidden="true">
-              {isStudent ? "S" : "A"}
-            </div>
+            <div className="admin-register-icon" aria-hidden="true">🔐</div>
             <span className="admin-register-eyebrow">CDAC PLACEMENT PORTAL</span>
-            <h1>{isStudent ? "Student Login" : "Admin Login"}</h1>
-            <p>
-              {isStudent
-                ? "Sign in using your registered student email and password."
-                : "Sign in using your admin email and password."}
-            </p>
+            <h1>Portal Sign In</h1>
           </div>
-
-          <button className="login-switch" type="button" onClick={switchLoginType}>
-            Switch to {isStudent ? "Admin" : "Student"} Login
-            <span aria-hidden="true">↗</span>
-          </button>
 
           <form className="admin-register-form" onSubmit={handleSubmit}>
             <div className="admin-form-field">
-              <label htmlFor="login-email">Email Address</label>
+              <label htmlFor="login-identifier">Email Address or PRN</label>
               <input
-                id="login-email"
-                type="email"
-                name="email"
-                placeholder={isStudent ? "aarav@cdac.in" : "admin@cdac.in"}
-                value={email}
+                id="login-identifier"
+                type="text"
+                name="identifier"
+                placeholder="Enter your email address or PRN"
+                value={identifier}
                 onChange={(event) => {
-                  setEmail(event.target.value);
+                  setIdentifier(event.target.value);
                   setMessage("");
                 }}
-                autoComplete="email"
+                autoComplete="username"
                 required
               />
             </div>
@@ -123,13 +124,9 @@ function Login() {
             )}
 
             <button className="admin-register-submit" type="submit" disabled={loading}>
-              {loading ? "Signing in..." : `Login as ${isStudent ? "Student" : "Admin"}`}{" "}
-              <span aria-hidden="true">→</span>
+              {loading ? "Signing in..." : "Sign In"} <span aria-hidden="true">→</span>
             </button>
           </form>
-          <p className="admin-register-footer">
-            Demo Credentials — Student: <strong>aarav@cdac.in</strong> / <strong>student123</strong> | Admin: <strong>admin@cdac.in</strong> / <strong>admin123</strong>
-          </p>
         </section>
         <p className="admin-register-note">Secure access · CDAC Placement Portal</p>
       </main>
