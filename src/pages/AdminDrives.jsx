@@ -47,15 +47,13 @@ const emptyDriveForm = () => ({
 
 export default function AdminDrives() {
   const [drives, setDrives] = useState([]);
+  const [shortlistDrive, setShortlistDrive] = useState(null);
+  const [shortlistedStudents, setShortlistedStudents] = useState([]);
+  const [shortlistLoading, setShortlistLoading] = useState(false);
+  const [shortlistError, setShortlistError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formError, setFormError] = useState('');
   const [editingDriveId, setEditingDriveId] = useState(null);
-  const [selectedDriveForShortlist, setSelectedDriveForShortlist] = useState(null);
-  const [shortlistStudents, setShortlistStudents] = useState([]);
-  const [shortlistedIds, setShortlistedIds] = useState([]);
-  const [shortlistLoading, setShortlistLoading] = useState(false);
-  const [shortlistSaving, setShortlistSaving] = useState(false);
-  const [shortlistError, setShortlistError] = useState('');
   
   const [driveForm, setDriveForm] = useState(emptyDriveForm);
 
@@ -65,10 +63,35 @@ export default function AdminDrives() {
 
   const fetchDrives = async () => {
     try {
-      const res = await fetch(`${API_BASE}/drives`).then((r) => r.json());
-      if (res.success) setDrives(res.drives || []);
+      const response = await fetch(`${API_BASE}/drives`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to load drives.');
+      }
+
+      const driveList = data.drives || [];
+      setDrives(driveList);
     } catch (err) {
       console.error('Error fetching drives:', err);
+    }
+  };
+
+  const openShortlistedStudents = async (drive) => {
+    setShortlistDrive(drive);
+    setShortlistedStudents([]);
+    setShortlistError('');
+    setShortlistLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/drives/${drive.id}/shortlist`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to load shortlisted students.');
+      }
+      setShortlistedStudents(data.shortlistedStudents || []);
+    } catch (error) {
+      setShortlistError(error.message || 'Unable to load shortlisted students.');
+    } finally {
+      setShortlistLoading(false);
     }
   };
 
@@ -153,10 +176,15 @@ export default function AdminDrives() {
   const handleDeleteDrive = async (id) => {
     if (!window.confirm('Are you sure you want to delete this drive?')) return;
     try {
-      const res = await fetch(`${API_BASE}/admin/drives/${id}`, { method: 'DELETE' }).then((r) => r.json());
-      if (res.success) fetchDrives();
+      const response = await fetch(`${API_BASE}/admin/drives/${id}`, { method: 'DELETE' });
+      const res = await response.json();
+      if (!response.ok || !res.success) {
+        window.alert(res.message || 'Failed to delete drive.');
+        return;
+      }
+      await fetchDrives();
     } catch (err) {
-      alert('Failed to delete drive.');
+      window.alert('Failed to delete drive.');
     }
   };
 
@@ -176,60 +204,6 @@ export default function AdminDrives() {
     } catch (err) {
       console.error('Error updating drive status:', err);
       window.alert('Unable to connect to the server. Please try again.');
-    }
-  };
-
-  const openShortlistModal = async (drive) => {
-    setSelectedDriveForShortlist(drive);
-    setShortlistLoading(true);
-    setShortlistError('');
-    try {
-      const [studentsResponse, shortlistResponse] = await Promise.all([
-        fetch(`${API_BASE}/students`),
-        fetch(`${API_BASE}/drives/${drive.id}/shortlist`)
-      ]);
-      const [studentsData, shortlistData] = await Promise.all([
-        studentsResponse.json(),
-        shortlistResponse.json()
-      ]);
-      if (!studentsResponse.ok || !studentsData.success) {
-        throw new Error(studentsData.message || 'Unable to load students.');
-      }
-      if (!shortlistResponse.ok || !shortlistData.success) {
-        throw new Error(shortlistData.message || 'Unable to load the existing shortlist.');
-      }
-      setShortlistStudents(studentsData.students || []);
-      setShortlistedIds((shortlistData.shortlistedStudentIds || []).map(Number));
-    } catch (err) {
-      console.error('Error loading drive shortlist:', err);
-      setShortlistError(err.message || 'Unable to load the shortlist.');
-    } finally {
-      setShortlistLoading(false);
-    }
-  };
-
-  const saveShortlist = async () => {
-    if (!selectedDriveForShortlist) return;
-    setShortlistSaving(true);
-    setShortlistError('');
-    try {
-      const response = await fetch(`${API_BASE}/admin/drives/${selectedDriveForShortlist.id}/shortlist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentIds: shortlistedIds })
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        setShortlistError(data.message || 'Unable to save the shortlist.');
-        return;
-      }
-      setSelectedDriveForShortlist(null);
-      await fetchDrives();
-    } catch (err) {
-      console.error('Error saving drive shortlist:', err);
-      setShortlistError('Unable to connect to the server. Please try again.');
-    } finally {
-      setShortlistSaving(false);
     }
   };
 
@@ -287,25 +261,29 @@ export default function AdminDrives() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <button
+                    onClick={() => openShortlistedStudents(drv)}
+                    style={{ width: '100%', background: '#dbeafe', color: '#1e40af', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    View Shortlisted Students ({drv.shortlisted_count || 0})
+                  </button>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => openShortlistModal(drv)}
-                      style={{ flex: 1, background: '#dbeafe', color: '#1e40af', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      Select Students
-                    </button>
-                    <button
-                      onClick={() => openEditDrive(drv)}
-                      style={{ flex: 1, background: '#e0e7ff', color: '#3730a3', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      Edit Drive
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDrive(drv.id)}
-                      style={{ flex: 1, background: '#fee2e2', color: '#b91c1c', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      Delete Drive
-                    </button>
+                    {driveStatus.label !== 'Completed' && (
+                      <button
+                        onClick={() => openEditDrive(drv)}
+                        style={{ flex: 1, background: '#e0e7ff', color: '#3730a3', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Edit Drive
+                      </button>
+                    )}
+                    {driveStatus.label !== 'Completed' && (
+                      <button
+                        onClick={() => handleDeleteDrive(drv.id)}
+                        style={{ flex: 1, background: '#fee2e2', color: '#b91c1c', border: 'none', padding: '8px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Delete Drive
+                      </button>
+                    )}
                   </div>
                   {driveStatus.label !== 'Completed' && (
                     <button
@@ -321,48 +299,34 @@ export default function AdminDrives() {
           })}
         </div>
 
-        {selectedDriveForShortlist && (
+        {shortlistDrive && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
-            <div style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '520px', maxWidth: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>Select Students for {selectedDriveForShortlist.company}</h2>
-              <p style={{ margin: '8px 0', color: '#64748b', fontSize: '13px' }}>
-                Select the students to include in this drive’s shortlist. Saving creates a manual shortlist for this drive.
-              </p>
-              {shortlistError && <p role="alert" style={{ color: '#b91c1c', fontSize: '13px', margin: '4px 0' }}>{shortlistError}</p>}
-              <div style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', margin: '8px 0 16px' }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '520px', maxWidth: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>
+                Shortlisted Students — {shortlistDrive.company}
+              </h2>
+              <p style={{ margin: '6px 0 12px', color: '#64748b', fontSize: '13px' }}>{shortlistDrive.role}</p>
+              {shortlistError && <p role="alert" style={{ color: '#b91c1c' }}>{shortlistError}</p>}
+              <div style={{ overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', marginBottom: '16px' }}>
                 {shortlistLoading ? (
                   <p style={{ color: '#64748b', textAlign: 'center' }}>Loading students…</p>
-                ) : shortlistStudents.length === 0 ? (
-                  <p style={{ color: '#64748b', textAlign: 'center' }}>No students are available.</p>
-                ) : shortlistStudents.map((student) => (
-                  <label key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 4px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={shortlistedIds.includes(Number(student.id))}
-                      onChange={() => setShortlistedIds((current) =>
-                        current.includes(Number(student.id))
-                          ? current.filter((id) => id !== Number(student.id))
-                          : [...current, Number(student.id)]
-                      )}
-                    />
-                    <span style={{ flex: 1 }}>
+                ) : shortlistError ? null : shortlistedStudents.length ? (
+                  shortlistedStudents.map((student) => (
+                    <div key={student.student_id} style={{ padding: '9px 4px', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
                       <strong>{student.name}</strong> <span style={{ color: '#64748b' }}>({student.prn})</span>
-                    </span>
-                    <span style={{ color: '#64748b', fontSize: '12px' }}>
-                      10th {student.tenth_marks || '-'} · 12th {student.twelfth_marks || '-'} · Degree {student.degree_marks || '-'}
-                    </span>
-                  </label>
-                ))}
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#64748b', textAlign: 'center' }}>No students shortlisted for this drive.</p>
+                )}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#64748b', fontSize: '13px' }}>{shortlistedIds.length} selected</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => setSelectedDriveForShortlist(null)} style={{ padding: '8px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                  <button type="button" onClick={saveShortlist} disabled={shortlistLoading || shortlistSaving} style={{ padding: '8px 14px', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '6px', cursor: shortlistSaving ? 'wait' : 'pointer', fontWeight: 600 }}>
-                    {shortlistSaving ? 'Saving…' : 'Save Shortlist'}
-                  </button>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShortlistDrive(null)}
+                style={{ alignSelf: 'flex-end', padding: '8px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
