@@ -166,6 +166,22 @@ export default function AdminStudents() {
     if (res.success) fetchStudents();
   };
 
+  // Function to download formatted CSV template
+  const handleDownloadFormat = () => {
+    const csvHeaders = "name,prn,email,password,phone,status,tenth_marks,twelfth_marks,degree_marks,cmce_marks,ccee_marks\n";
+    const sampleRow = "Aarav Deshmukh,CDAC2026001,aarav@cdac.in,password123,9876543210,Unplaced,84%,,85%,,\n";
+    
+    const blob = new Blob([csvHeaders + sampleRow], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "student_upload_format.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleCsvUpload = async (e) => {
     e.preventDefault();
     if (!csvFile) return alert('Please select a CSV file.');
@@ -424,15 +440,30 @@ export default function AdminStudents() {
             </form>
           </div>
         )}
+        
 
         {showCsvModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <form onSubmit={handleCsvUpload} style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '440px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h3>Import Students via CSV</h3>
-              <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Import Students via CSV</h3>
+              
+              {/* Show Format / Download Template Button */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 8px' }}>Unsure about the columns? Download the sample template format:</p>
+                <button
+                  type="button"
+                  onClick={handleDownloadFormat}
+                  style={{ width: '100%', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  📥 Show Format in CSV (Download Template)
+                </button>
+              </div>
+
+              <input type="file" accept=".csv" onChange={(e) => setCsvFile(e.target.files[0])} style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }} />
+              
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowCsvModal(false)} style={{ padding: '8px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '8px 14px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Upload & Import</button>
+                <button type="submit" style={{ padding: '8px 14px', background: '#059669', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Upload & Import</button>
               </div>
             </form>
           </div>
