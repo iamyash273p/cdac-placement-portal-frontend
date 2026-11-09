@@ -241,6 +241,22 @@ export default function AdminStudents() {
     return 0;
   });
 
+  const handleDeleteAdmin = async (id) => {
+  if (!window.confirm('Are you sure you want to delete this admin?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/admins/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      // Refresh your admin list function here
+    } else {
+      alert(data.message);
+    }
+  } catch (err) {
+    console.error('Error deleting admin:', err);
+  }
+};
+
   // Pagination Calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
