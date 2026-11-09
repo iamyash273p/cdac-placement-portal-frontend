@@ -5,8 +5,7 @@ function AdminSidebar() {
   const links = [
     { name: "Dashboard", path: "/admin", icon: "📊" },
     { name: "Drives", path: "/admin/drives", icon: "💼" },
-    { name: "Students", path: "/admin/students", icon: "🎓" },
-    { name: "Admins", path: "/admin/admins", icon: "🛡️" }
+    { name: "Students", path: "/admin/students", icon: "🎓" }
   ];
 
   return (
@@ -18,7 +17,7 @@ function AdminSidebar() {
             <NavLink
               key={link.path}
               to={link.path}
-              end={link.path === "/admin" || link.path === "/admin/admins"}
+              end={link.path === "/admin"}
               className={({ isActive }) =>
                 isActive ? "admin-sidebar-link active" : "admin-sidebar-link"
               }

@@ -15,8 +15,8 @@
 .contact-eyebrow {
   display: inline-block;
   padding: 5px 12px;
-  background: #e8edff;
-  color: #263b80;
+  background: #e2e8f0;
+  color: #1e293b;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 800;
@@ -25,7 +25,7 @@
 
 .contact-header h1 {
   margin: 12px 0 8px;
-  color: #172554;
+  color: #0f172a;
   font-size: clamp(24px, 3.5vw, 34px);
 }
 
@@ -46,6 +46,7 @@
   align-items: start;
 }
 
+<<<<<<< Updated upstream
 /* Chat Thread Panel */
 .chat-thread-panel {
   background: #ffffff;
@@ -53,6 +54,29 @@
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 6px 20px rgba(23, 37, 84, 0.04);
+=======
+.contact-info-panel {
+  background: #334155;
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+}
+
+.contact-info-panel h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.info-subtext {
+  margin: 0 0 24px;
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.contact-info-list {
+>>>>>>> Stashed changes
   display: flex;
   flex-direction: column;
   height: 490px;
@@ -103,7 +127,17 @@
   text-align: center;
   color: #64748b;
   font-size: 13px;
+<<<<<<< Updated upstream
   max-width: 300px;
+=======
+  margin-bottom: 3px;
+}
+
+.contact-info-item p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #e2e8f0;
+>>>>>>> Stashed changes
   line-height: 1.5;
 }
 
@@ -111,6 +145,7 @@
   display: flex;
 }
 
+<<<<<<< Updated upstream
 .chat-bubble-row.from-student {
   justify-content: flex-end;
 }
@@ -169,6 +204,8 @@
 }
 
 /* Right Form Panel */
+=======
+>>>>>>> Stashed changes
 .contact-form-panel {
   background: #ffffff;
   border: 1px solid #e5eaf3;
@@ -180,7 +217,7 @@
 .contact-form-panel h2 {
   margin: 0 0 18px;
   font-size: 19px;
-  color: #172554;
+  color: #0f172a;
 }
 
 .contact-form {
@@ -220,12 +257,22 @@
 
 .contact-field input:focus,
 .contact-field textarea:focus {
+<<<<<<< Updated upstream
   border-color: #263b80;
 }
 
 .contact-submit-btn {
   padding: 11px 20px;
   background: #263b80;
+=======
+  border-color: #334155;
+}
+
+.contact-submit-btn {
+  align-self: flex-start;
+  padding: 11px 22px;
+  background: #334155;
+>>>>>>> Stashed changes
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -235,7 +282,7 @@
 }
 
 .contact-submit-btn:hover {
-  background: #172554;
+  background: #1e293b;
 }
 
 @media (max-width: 900px) {

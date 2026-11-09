@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { StudentNavbar } from "../components/Navbar/Navbar";
+<<<<<<< Updated upstream
 import { API_BASE } from "../services/api";
+=======
+import { getSession } from "../services/api";
+>>>>>>> Stashed changes
 import "./Contact.css";
 
 function Contact() {
-  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
+  const session = getSession();
+  const storedUser = session?.user;
 
   const [studentName, setStudentName] = useState(storedUser?.name || "Aarav Deshmukh");
   const [studentEmail, setStudentEmail] = useState(storedUser?.email || "aarav@cdac.in");
@@ -35,6 +40,7 @@ function Contact() {
     e.preventDefault();
     if (!messageText.trim() || !studentEmail.trim()) return;
 
+<<<<<<< Updated upstream
     setSending(true);
     try {
       const res = await fetch(`${API_BASE}/queries`, {
@@ -60,6 +66,23 @@ function Contact() {
     } finally {
       setSending(false);
     }
+=======
+    const mailSubject = encodeURIComponent(
+      `[CDAC Placement Query] ${form.subject} (${form.prn || form.name})`
+    );
+    const mailBody = encodeURIComponent(
+      `Student Name: ${form.name}
+PRN No: ${form.prn || "N/A"}
+Student Email: ${form.email}
+
+Query / Question:
+${form.message}`
+    );
+
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${mailSubject}&body=${mailBody}`;
+    setSubmitted(true);
+    setForm({ ...form, subject: "", message: "" });
+>>>>>>> Stashed changes
   }
 
   return (
@@ -77,12 +100,33 @@ function Contact() {
         </section>
 
         <section className="contact-layout">
+<<<<<<< Updated upstream
           {/* Left Column: Live Chat History with Admin */}
           <div className="chat-thread-panel">
             <div className="chat-thread-header">
               <div>
                 <h2>Conversation with Admin</h2>
                 <span>Showing messages for {studentEmail}</span>
+=======
+          <div className="contact-info-panel">
+            <h2>CDAC Placement Cell</h2>
+            <p className="info-subtext">
+              All student placement queries are handled via our official
+              placement support email desk.
+            </p>
+
+            <div className="contact-info-list">
+              <div className="contact-info-item">
+                <span className="info-icon">✉️</span>
+                <div>
+                  <strong>Official Support Email</strong>
+                  <p>
+                    <a href={`mailto:${SUPPORT_EMAIL}`} className="support-email-link">
+                      {SUPPORT_EMAIL}
+                    </a>
+                  </p>
+                </div>
+>>>>>>> Stashed changes
               </div>
               <button
                 type="button"
@@ -93,6 +137,7 @@ function Contact() {
               </button>
             </div>
 
+<<<<<<< Updated upstream
             <div className="chat-messages-box">
               {chatHistory.length === 0 ? (
                 <p className="empty-chat-text">
@@ -121,6 +166,34 @@ function Contact() {
           </div>
 
           {/* Right Column: Send Query / Chat Input Form */}
+=======
+              <div className="contact-info-item">
+                <span className="info-icon">📞</span>
+                <div>
+                  <strong>Placement Helpline</strong>
+                  <p>+91 20 2550 3100 / +91 98220 11223</p>
+                </div>
+              </div>
+
+              <div className="contact-info-item">
+                <span className="info-icon">📍</span>
+                <div>
+                  <strong>Campus Address</strong>
+                  <p>CDAC Innovation Park, Panchavati, Pashan, Pune - 411008</p>
+                </div>
+              </div>
+
+              <div className="contact-info-item">
+                <span className="info-icon">🕒</span>
+                <div>
+                  <strong>Support Hours</strong>
+                  <p>Monday – Saturday: 9:30 AM to 6:00 PM</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+>>>>>>> Stashed changes
           <div className="contact-form-panel">
             <h2>Send a New Query / Message</h2>
 

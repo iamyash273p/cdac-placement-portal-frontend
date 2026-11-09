@@ -1,17 +1,21 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { API_BASE, getSession, clearSession } from "../../services/api";
 import "./AdminNavbar.css";
 
 export default function AdminNavbar() {
   const navigate = useNavigate();
+  const session = getSession();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [adminProfile, setAdminProfile] = useState({
-    name: "Placement Officer",
-    email: "admin.placement@cdac.in",
-    phone: "+91 9822011223",
-    photo: ""
+    id: session?.user?.id || 1,
+    name: session?.user?.name || "Placement Officer",
+    email: session?.user?.email || "admin@cdac.in",
+    phone: session?.user?.phone || "9822011223",
+    photo: session?.user?.photo || ""
   });
 
   const handlePhotoChange = (e) => {
@@ -25,13 +29,36 @@ export default function AdminNavbar() {
     }
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const current = getSession();
+    if (current) {
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...current.user, ...adminProfile })
+      );
+      try {
+        await fetch(`${API_BASE}/auth/profile`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: adminProfile.id,
+            role: "admin",
+            email: adminProfile.email,
+            phone: adminProfile.phone,
+            photo: adminProfile.photo
+          })
+        });
+      } catch (err) {
+        console.error("Failed updating admin profile:", err);
+      }
+    }
     setShowEditProfile(false);
   };
 
   function handleLogout() {
-    navigate("/login");
+    clearSession();
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -46,10 +73,6 @@ export default function AdminNavbar() {
         </Link>
 
         <div className="admin-topbar-right">
-          <Link to="/" className="student-view-link">
-            Student View ↗
-          </Link>
-
           {/* Profile Button with Dropdown List */}
           <div className="admin-profile-dropdown">
             <button
@@ -104,7 +127,7 @@ export default function AdminNavbar() {
         </div>
       </header>
 
-      {/* Edit Profile Modal (Update Photo, Email, or Phone No) */}
+      {/* Edit Profile Modal */}
       {showEditProfile && (
         <div
           className="admin-modal-backdrop"

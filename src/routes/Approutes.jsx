@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Home from "../pages/Home";
 import About from "../pages/About";
@@ -7,29 +8,123 @@ import AdminRegister from "../pages/AdminRegister";
 import AdminDashboard from "../pages/AdminDashboard";
 import AdminDrives from "../pages/AdminDrives";
 import AdminStudents from "../pages/AdminStudents";
-import AdminAdmins from "../pages/AdminAdmins"; // <-- 1. Import your AdminAdmins component
-import AdminQueries from "../pages/AdminQueries";
+import { getSession } from "../services/api";
+
+// Requires user to be logged in (Redirects to /login if not authenticated)
+function ProtectedRoute({ children, allowedRole }) {
+  const session = getSession();
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  if (allowedRole && session.role !== allowedRole) {
+    return (
+      <Navigate
+        to={session.role === "admin" ? "/admin" : "/student-dashboard"}
+        replace
+      />
+    );
+  }
+  return children;
+}
+
+// Redirects root "/" to "/login" if not signed in, or to the user's dashboard if signed in
+function RootRedirect() {
+  const session = getSession();
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+  return (
+    <Navigate
+      to={session.role === "admin" ? "/admin" : "/student-dashboard"}
+      replace
+    />
+  );
+}
+
+// Prevents logged-in users from seeing the login screen unless they logout
+function PublicOnlyRoute({ children }) {
+  const session = getSession();
+  if (session) {
+    return (
+      <Navigate
+        to={session.role === "admin" ? "/admin" : "/student-dashboard"}
+        replace
+      />
+    );
+  }
+  return children;
+}
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Student & Public Routes */}
-        <Route path="/" element={<Home />} />
-        <Route path="/student-dashboard" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/login" element={<Login />} />
+        {/* First screen is always Login unless an active session exists */}
+        <Route path="/" element={<RootRedirect />} />
+
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
         <Route path="/admin-register" element={<AdminRegister />} />
 
-        {/* Admin Portal Routes */}
-        <Route path="/admin" element={<AdminDashboard defaultTab="overview" />} />
-        <Route path="/admin/drives" element={<AdminDrives />} />
-        <Route path="/admin/students" element={<AdminStudents />} />
-        <Route path="/admin/admins" element={<AdminAdmins />} /> {/* <-- 2. Add this route */}
-        <Route path="/admin/queries" element={<AdminQueries />} />
+        {/* Protected Student Routes */}
+        <Route
+          path="/student-dashboard"
+          element={
+            <ProtectedRoute allowedRole="student">
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <ProtectedRoute>
+              <About />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <ProtectedRoute>
+              <Contact />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Fallback */}
+        {/* Protected Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDashboard defaultTab="overview" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/drives"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDrives />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/students"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminStudents />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Catch-all redirects to "/" which routes to "/login" or active session dashboard */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

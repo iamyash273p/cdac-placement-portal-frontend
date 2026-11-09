@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PublicNavbar } from "../components/Navbar/Navbar";
-import { API_BASE } from "../services/api";
+import { API_BASE, saveSession } from "../services/api";
 import "./Login.css";
 
 function Login() {
@@ -35,14 +35,14 @@ function Login() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        saveSession(data.token, data.user, data.role);
         setMessage("Login successful! Redirecting...");
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("role", data.role);
 
         setTimeout(() => {
-          navigate(data.role === "admin" || !isStudent ? "/admin" : "/student-dashboard");
-        }, 700);
+          navigate(data.role === "admin" ? "/admin" : "/student-dashboard", {
+            replace: true
+          });
+        }, 500);
       } else {
         setMessage(data.message || "Invalid email or password.");
       }
@@ -128,10 +128,12 @@ function Login() {
             </button>
           </form>
           <p className="admin-register-footer">
-            Demo Credentials — Student: <strong>aarav@cdac.in</strong> / <strong>student123</strong> | Admin: <strong>admin@cdac.in</strong> / <strong>admin123</strong>
+            Default Student: <strong>aarav@cdac.in</strong> / <strong>student123</strong>
+            <br />
+            Default Admin: <strong>admin@cdac.in</strong> / <strong>admin123</strong>
           </p>
         </section>
-        <p className="admin-register-note">Secure access · CDAC Placement Portal</p>
+        <p className="admin-register-note">Secure Session Management · CDAC Placement Portal</p>
       </main>
     </div>
   );
