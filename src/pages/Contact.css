@@ -1,6 +1,6 @@
 .contact-page {
   min-height: calc(100vh - 68px);
-  padding: 44px 6%;
+  padding: 48px 6%;
   background: #f5f7fb;
   color: #1e293b;
   font-family: "Inter", sans-serif;
@@ -8,7 +8,7 @@
 
 .contact-header {
   max-width: 760px;
-  margin: 0 auto 32px;
+  margin: 0 auto 36px;
   text-align: center;
 }
 
@@ -38,142 +38,83 @@
 }
 
 .contact-layout {
-  max-width: 1140px;
+  max-width: 1050px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: 1fr 1.35fr;
   gap: 24px;
   align-items: start;
 }
 
-/* Chat Thread Panel */
-.chat-thread-panel {
-  background: #ffffff;
-  border: 1px solid #e5eaf3;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 6px 20px rgba(23, 37, 84, 0.04);
-  display: flex;
-  flex-direction: column;
-  height: 490px;
-}
-
-.chat-thread-header {
-  padding: 16px 20px;
+/* Left Support Info Panel */
+.contact-info-panel {
   background: #263b80;
   color: #ffffff;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 10px 25px rgba(38, 59, 128, 0.15);
 }
 
-.chat-thread-header h2 {
-  margin: 0 0 3px;
-  font-size: 16px;
+.contact-info-panel h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
 }
 
-.chat-thread-header span {
-  font-size: 11.5px;
+.info-subtext {
+  margin: 0 0 24px;
   color: #dbe5ff;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
-.refresh-chat-btn {
-  padding: 6px 11px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.chat-messages-box {
-  flex: 1;
-  padding: 18px;
-  overflow-y: auto;
-  background: #f8fafc;
+.contact-info-list {
   display: flex;
   flex-direction: column;
+  gap: 18px;
+}
+
+.contact-info-item {
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
 }
 
-.empty-chat-text {
-  margin: auto;
-  text-align: center;
-  color: #64748b;
+.info-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.contact-info-item strong {
+  display: block;
   font-size: 13px;
-  max-width: 300px;
+  margin-bottom: 3px;
+}
+
+.contact-info-item p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #dbe5ff;
   line-height: 1.5;
 }
 
-.chat-bubble-row {
-  display: flex;
+.support-email-link {
+  color: #ffd166;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
-.chat-bubble-row.from-student {
-  justify-content: flex-end;
-}
-
-.chat-bubble-row.from-admin {
-  justify-content: flex-start;
-}
-
-.chat-bubble {
-  max-width: 82%;
-  padding: 11px 14px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.from-student .chat-bubble {
-  background: #263b80;
-  color: #ffffff;
-  border-bottom-right-radius: 3px;
-}
-
-.from-admin .chat-bubble {
-  background: #ffffff;
-  color: #1e293b;
-  border: 1px solid #dbe2ef;
-  border-bottom-left-radius: 3px;
-}
-
-.chat-bubble-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 5px;
-  font-size: 11px;
-}
-
-.from-student .chat-bubble-meta {
-  color: #dbe5ff;
-}
-
-.from-admin .chat-bubble-meta {
-  color: #263b80;
-}
-
-.chat-topic-tag {
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.12);
-  font-size: 10px;
-}
-
-.chat-bubble p {
-  margin: 0;
-}
-
-/* Right Form Panel */
+/* Right Email Form Panel */
 .contact-form-panel {
   background: #ffffff;
   border: 1px solid #e5eaf3;
   border-radius: 14px;
-  padding: 26px;
+  padding: 28px;
   box-shadow: 0 6px 20px rgba(23, 37, 84, 0.04);
 }
 
@@ -192,7 +133,7 @@
 .contact-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .contact-field {
@@ -216,15 +157,18 @@
   font-size: 13px;
   color: #1e293b;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .contact-field input:focus,
 .contact-field textarea:focus {
   border-color: #263b80;
+  box-shadow: 0 0 0 3px rgba(38, 59, 128, 0.1);
 }
 
 .contact-submit-btn {
-  padding: 11px 20px;
+  align-self: flex-start;
+  padding: 11px 22px;
   background: #263b80;
   color: #ffffff;
   border: none;
@@ -232,10 +176,21 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 .contact-submit-btn:hover {
   background: #172554;
+}
+
+.contact-success-msg {
+  margin: 0;
+  padding: 10px 14px;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {
@@ -245,6 +200,9 @@
 }
 
 @media (max-width: 560px) {
+  .contact-page {
+    padding: 32px 16px;
+  }
   .contact-row {
     grid-template-columns: 1fr;
   }

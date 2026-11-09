@@ -1,5 +1,6 @@
 import React from "react";
 import { StudentNavbar } from "../components/Navbar/Navbar";
+import facultyGroupImg from "../assets/Avengers.png";
 import "./About.css";
 
 function About() {
@@ -32,7 +33,7 @@ function About() {
     {
       icon: "🎯",
       title: "Centralized Campus Drives",
-      text: "Track upcoming company placement drives, eligibility criteria,CTC packages, and drive dates in one unified dashboard."
+      text: "Track upcoming company placement drives, eligibility criteria, CTC packages, and drive dates in one unified dashboard."
     },
     {
       icon: "🎙️",
@@ -51,15 +52,43 @@ function About() {
       <StudentNavbar />
 
       <main className="about-page">
-        {/* Hero Banner */}
+        {/* Hero Header */}
         <section className="about-hero">
           <span className="about-eyebrow">ABOUT CDAC PLACEMENT PORTAL</span>
           <h1>Bridging CDAC Talent with Leading Technology Companies</h1>
           <p>
             Our placement portal streamlines campus recruitment by connecting
-            trained post-graduate diploma students with top IT and R&D
+            trained post-graduate diploma students with top IT and R&amp;D
             recruiters across India.
           </p>
+        </section>
+
+        {/* Faculty Group Photo Banner */}
+        <section className="faculty-banner-section">
+          <div
+            className="faculty-banner-card"
+            style={{ height: "400px", position: "relative" }}
+          >
+            <img
+              src={facultyGroupImg}
+              alt="CDAC Faculty and Placement Committee Group Photo"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "fill",
+                display: "block"
+              }}
+            />
+            <div className="faculty-banner-overlay">
+              <span className="faculty-badge">OUR MENTORS &amp; GUIDES</span>
+              <h2>CDAC Faculty &amp; Placement Coordination Team</h2>
+              <p>
+                Dedicated faculty members, course coordinators, and placement
+                officers mentoring every batch toward industry excellence and
+                successful technology careers.
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* Placement Highlights Bar */}
