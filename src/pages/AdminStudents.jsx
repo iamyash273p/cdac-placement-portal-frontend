@@ -25,6 +25,9 @@ export default function AdminStudents() {
   const [formError, setFormError] = useState('');
   const [savingStudent, setSavingStudent] = useState(false);
 
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'ascending' });
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -51,8 +54,12 @@ export default function AdminStudents() {
   }, []);
 
   const fetchStudents = async () => {
-    const res = await fetch(`${API_BASE}/students`).then((r) => r.json());
-    if (res.success) setStudents(res.students || []);
+    try {
+      const res = await fetch(`${API_BASE}/students`).then((r) => r.json());
+      if (res.success) setStudents(res.students || []);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+    }
   };
 
   const handleAdd = async (e) => {
@@ -139,14 +146,18 @@ export default function AdminStudents() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this student?')) return;
-    const res = await fetch(`${API_BASE}/admin/students/${id}`, { method: 'DELETE' }).then((r) => r.json());
-    if (res.success) fetchStudents();
+    try {
+      const res = await fetch(`${API_BASE}/admin/students/${id}`, { method: 'DELETE' }).then((r) => r.json());
+      if (res.success) fetchStudents();
+    } catch (err) {
+      console.error('Error deleting student:', err);
+    }
   };
 
   // Function to download formatted CSV template
   const handleDownloadFormat = () => {
     const csvHeaders = "name,prn,email,password,phone,status,tenth_marks,twelfth_marks,degree_marks,cmce_marks,ccee_marks\n";
-    const sampleRow = "Aarav Deshmukh,CDAC2026001,aarav@cdac.in,password123,9876543210,Unplaced,84%,,85%,,\n";
+    const sampleRow = "Aarav Deshmukh,CDAC2026001,aarav@cdac.in,cdac@8270,9876543210,Unplaced,84%,80%,85%,75%,80%\n";
     
     const blob = new Blob([csvHeaders + sampleRow], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -189,20 +200,51 @@ export default function AdminStudents() {
         });
         const result = await res.json();
         alert(result.message);
+        
+        // 1. Close modal & reset file input
         setShowCsvModal(false);
         setCsvFile(null);
+        
+        // 2. Instant refresh without reload
         await fetchStudents();
       } catch (err) {
+        console.error('CSV upload error:', err);
         alert('Failed to upload CSV data.');
       }
     };
     reader.readAsText(csvFile);
   };
 
+  // Sorting logic handler
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedStudents = [...students].sort((a, b) => {
+    let aValue = a[sortConfig.key] || '';
+    let bValue = b[sortConfig.key] || '';
+
+    if (!isNaN(aValue) && !isNaN(bValue)) {
+      aValue = Number(aValue);
+      bValue = Number(bValue);
+    } else {
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
+    }
+
+    if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+    return 0;
+  });
+
   // Pagination Calculations
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentStudents = students.slice(indexOfFirstItem, indexOfLastItem);
+  const currentStudents = sortedStudents.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(students.length / itemsPerPage) || 1;
 
   return (
@@ -233,16 +275,24 @@ export default function AdminStudents() {
           </div>
         </div>
 
-        {/* Student Table */}
+        {/* Student Table with Clickable Sorting Headers */}
         <div style={{ background: '#fff', padding: '22px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', textAlign: 'left', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px' }}>Student</th>
-                <th style={{ padding: '12px' }}>Email</th>
-                <th style={{ padding: '12px' }}>PRN No</th>
+                <th onClick={() => handleSort('name')} style={{ padding: '12px', cursor: 'pointer' }}>
+                  Student {sortConfig.key === 'name' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                </th>
+                <th onClick={() => handleSort('email')} style={{ padding: '12px', cursor: 'pointer' }}>
+                  Email {sortConfig.key === 'email' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                </th>
+                <th onClick={() => handleSort('prn')} style={{ padding: '12px', cursor: 'pointer' }}>
+                  PRN No {sortConfig.key === 'prn' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                </th>
                 <th style={{ padding: '12px' }}>Role</th>
-                <th style={{ padding: '12px' }}>Status</th>
+                <th onClick={() => handleSort('status')} style={{ padding: '12px', cursor: 'pointer' }}>
+                  Status {sortConfig.key === 'status' ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : ''}
+                </th>
                 <th style={{ padding: '12px' }}>Calls Left</th>
                 <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
               </tr>
@@ -301,6 +351,7 @@ export default function AdminStudents() {
           </div>
         </div>
 
+        {/* Add / Edit Student Modal */}
         {(showAddModal || showEditModal) && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
             <form
@@ -370,14 +421,13 @@ export default function AdminStudents() {
             </form>
           </div>
         )}
-        
 
+        {/* CSV Import Modal with Download Format & Instant Refresh */}
         {showCsvModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
             <form onSubmit={handleCsvUpload} style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '440px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Import Students via CSV</h3>
               
-              {/* Show Format / Download Template Button */}
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 8px' }}>Unsure about the columns? Download the sample template format:</p>
                 <button

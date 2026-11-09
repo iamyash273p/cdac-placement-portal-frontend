@@ -79,12 +79,12 @@ function Login() {
 
           <form className="admin-register-form" onSubmit={handleSubmit}>
             <div className="admin-form-field">
-              <label htmlFor="login-identifier">Email Address or PRN</label>
+              <label htmlFor="login-identifier">Email Address</label>
               <input
                 id="login-identifier"
                 type="text"
                 name="identifier"
-                placeholder="Enter your email address or PRN"
+                placeholder="Enter your email address"
                 value={identifier}
                 onChange={(event) => {
                   setIdentifier(event.target.value);
