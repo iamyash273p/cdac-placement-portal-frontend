@@ -2,9 +2,10 @@
   width: 100%;
   min-height: 68px;
   box-sizing: border-box;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
+  justify-content: initial;
   gap: 24px;
   padding: 12px 5%;
   background: #263b80;
@@ -63,6 +64,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  justify-self: end;
 }
 
 /* Profile Dropdown Styles */
@@ -287,6 +289,7 @@
 
 @media (max-width: 720px) {
   .portal-navbar {
+    display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 14px;

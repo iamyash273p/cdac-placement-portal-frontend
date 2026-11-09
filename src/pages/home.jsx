@@ -1,27 +1,37 @@
 import React, { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { StudentNavbar } from "../components/Navbar/Navbar";
 import { API_BASE } from "../services/api";
 import "./Home.css";
 
+const formatPackage = (value) => {
+  const packageText = String(value ?? '');
+  return /lpa/i.test(packageText) ? packageText : `${packageText} LPA`;
+};
+
 function Home() {
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
+  const isStudent = Boolean(token && role === "student");
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-  const student = {
-    id: storedUser?.id || 1,
-    name: storedUser?.name || "Aarav Deshmukh",
-    email: storedUser?.email || "aarav@cdac.in",
-    course: "PG-DAC",
-    prn: storedUser?.prn || "CDAC2026001"
-  };
+  const student = storedUser || {};
 
   const [shortlistedDrives, setShortlistedDrives] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(student.id || student.email));
 
   useEffect(() => {
-    const queryParam = storedUser?.id
-      ? `studentId=${encodeURIComponent(storedUser.id)}`
-      : `email=${encodeURIComponent(student.email)}`;
+    if (!isStudent) return;
 
-    fetch(`${API_BASE}/student/shortlisted-drives?${queryParam}`)
+    const params = new URLSearchParams();
+    if (student.id) {
+      params.set("studentId", student.id);
+    } else if (student.email) {
+      params.set("email", student.email);
+    } else {
+      return;
+    }
+
+    fetch(`${API_BASE}/student/shortlisted-drives?${params}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.drives)) {
@@ -32,13 +42,17 @@ function Home() {
         console.error("Failed to fetch shortlisted drives:", err);
       })
       .finally(() => setLoading(false));
-  }, [storedUser?.id, student.email]);
+  }, [isStudent, student.id, student.email]);
 
   // Calculate total interview rounds completed across shortlisted drives
   const totalRoundsCompleted = shortlistedDrives.reduce(
     (sum, drive) => sum + (Number(drive.rounds_completed ?? drive.roundsCompleted) || 0),
     0
   );
+
+  if (!isStudent) {
+    return <Navigate to={token && role === "admin" ? "/admin" : "/login"} replace />;
+  }
 
   return (
     <>
@@ -57,7 +71,7 @@ function Home() {
               STUDENT DASHBOARD
             </p>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">
-              Welcome back, {student.name}!
+              {student.name ? `Welcome back, ${student.name}!` : "Welcome back"}
             </h1>
             <p className="text-sm text-gray-500">
               Viewing placement drives where you have been shortlisted by the Admin.
@@ -66,13 +80,15 @@ function Home() {
 
           <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-xl border border-gray-200 shadow-sm">
             <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-lg">
-              {student.name.charAt(0)}
+              {student.name?.charAt(0).toUpperCase() || ""}
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-gray-900">{student.name}</h3>
-              <p className="text-xs text-gray-500">
-                {student.email} | {student.prn}
-              </p>
+              {student.name && <h3 className="font-semibold text-sm text-gray-900">{student.name}</h3>}
+              {(student.email || student.prn) && (
+                <p className="text-xs text-gray-500">
+                  {[student.email, student.prn].filter(Boolean).join(" | ")}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -170,7 +186,7 @@ function Home() {
                         </p>
                         <p className="flex justify-between">
                           <span className="text-gray-500">Package</span>
-                          <strong className="text-gray-800">{job.package}</strong>
+                          <strong className="text-gray-800">{formatPackage(job.package)}</strong>
                         </p>
                         <p className="flex justify-between">
                           <span className="text-gray-500">Location</span>

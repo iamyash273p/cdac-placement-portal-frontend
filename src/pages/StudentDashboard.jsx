@@ -1,20 +1,40 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './StudentDashboard.css';
 
 const API_BASE = 'http://localhost:7500/api';
 
+const formatPackage = (value) => {
+  const packageText = String(value ?? '');
+  return /lpa/i.test(packageText) ? packageText : `${packageText} LPA`;
+};
+
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [shortlistedDrives, setShortlistedDrives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // 1. Instant Guard Check
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+
+    if (!token || role !== 'student') {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    // 2. Load stored user immediately for instant rendering
     try {
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        // Fetch fresh student profile from backend to get updated calls and status
+        setStudent(parsedUser);
+        fetchShortlistedDrives(parsedUser);
+
+        // Fetch fresh background data
         fetch(`${API_BASE}/students`)
           .then(r => r.json())
           .then(data => {
@@ -22,17 +42,11 @@ export default function StudentDashboard() {
               const freshStudent = data.students.find(s => s.id === parsedUser.id || s.email === parsedUser.email);
               if (freshStudent) {
                 setStudent(freshStudent);
-                fetchShortlistedDrives(freshStudent);
-                return;
+                localStorage.setItem('user', JSON.stringify(freshStudent)); // Keep local cache updated
               }
             }
-            setStudent(parsedUser);
-            fetchShortlistedDrives(parsedUser);
           })
-          .catch(() => {
-            setStudent(parsedUser);
-            fetchShortlistedDrives(parsedUser);
-          });
+          .catch(err => console.log('Background sync skipped:', err));
       } else {
         setError('No active student session found. Please log in.');
         setLoading(false);
@@ -41,7 +55,7 @@ export default function StudentDashboard() {
       setError('Failed to load user session.');
       setLoading(false);
     }
-  }, []);
+  }, [navigate]);
 
   const fetchShortlistedDrives = async (userData) => {
     try {
@@ -55,6 +69,14 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+
+    navigate('/login', { replace: true });
   };
 
   if (loading) {
@@ -77,7 +99,6 @@ export default function StudentDashboard() {
     );
   }
 
-  // Calculate remaining calls dynamically from allocated calls
   const totalCallsNum = parseInt(student.calls) || 0;
   const callsUsedNum = student.calls_used || 0;
   const callsLeft = Math.max(0, totalCallsNum - callsUsedNum);
@@ -86,6 +107,19 @@ export default function StudentDashboard() {
     <div className="student-dashboard-page">
       <div className="student-main-container">
         
+        {/* Header with Logout button option */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca',
+              padding: '6px 14px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '13px'
+            }}
+          >
+            🚪 Logout
+          </button>
+        </div>
+
         {/* Welcome Banner */}
         <div className="student-welcome-card">
           <h1>Welcome back, {student.name}!</h1>
@@ -95,7 +129,6 @@ export default function StudentDashboard() {
         {/* Profile Details & Calls Tracker Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '2.5rem' }}>
           
-          {/* Personal Details */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
               👤 Personal & Academic Profile
@@ -109,7 +142,6 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {/* Placement Calls Tracker Card */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
               📞 Placement Calls Tracker
@@ -135,7 +167,6 @@ export default function StudentDashboard() {
 
         </div>
 
-        {/* Shortlisted Company Drives Section */}
         <h2 className="section-title">My Shortlisted Company Drives</h2>
         <p style={{ color: '#64748b', fontSize: '14px', marginTop: '-1rem', marginBottom: '1.5rem' }}>
           Only drives for which the Placement Admin has shortlisted you appear below.
@@ -158,7 +189,7 @@ export default function StudentDashboard() {
                     <span className="drive-status-badge active">{drv.status || 'Shortlisted'}</span>
                   </div>
                   <p className="drive-role">{drv.role}</p>
-                  <p className="drive-package">{drv.package}</p>
+                  <p className="drive-package">{formatPackage(drv.package)}</p>
                   <p className="drive-meta">📍 <strong>Location:</strong> {drv.location}</p>
                   <p className="drive-meta">📅 <strong>Drive Date:</strong> {drv.drive_date}</p>
                   <p className="drive-meta">📋 <strong>Criteria:</strong> {drv.criteria || 'Standard CDAC norms'}</p>

@@ -113,7 +113,7 @@ export default function AdminAdmins() {
                     <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>{adm.name}</td>
                     <td style={{ padding: '12px', color: '#475569' }}>{adm.email}</td>
                     <td style={{ padding: '12px', color: '#475569' }}>{adm.phone || '-'}</td>
-                    <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>Placement Officer</td>
+                    <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>{adm.role ? adm.role.charAt(0).toUpperCase() + adm.role.slice(1) : 'Admin'}</td>
                     <td style={{ padding: '12px', textAlign: 'right' }}>
                       <button onClick={() => handleDeleteAdmin(adm.id)} style={{ background: '#fee2e2', color: '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
                         Delete
@@ -159,15 +159,15 @@ export default function AdminAdmins() {
               <h3>Create New Admin</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Full Name *</label>
-                <input placeholder="e.g. John Doe" required value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                <input placeholder="Enter administrator name" required value={adminForm.name} onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Email *</label>
-                <input placeholder="e.g. john@cdac.in" type="email" required value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                <input placeholder="Enter administrator email" type="email" required value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Phone Number</label>
-                <input placeholder="e.g. 9876543210" value={adminForm.phone} onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
+                <input placeholder="Enter phone number" value={adminForm.phone} onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })} style={{ padding: '8px', border: '1px solid #cbd5e1', borderRadius: '6px' }} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>Password *</label>

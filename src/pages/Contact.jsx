@@ -124,7 +124,7 @@ function Contact() {
                     name="prn"
                     value={form.prn}
                     onChange={handleChange}
-                    placeholder="e.g. CDAC2026001"
+                    placeholder="Enter your PRN"
                   />
                 </div>
               </div>
@@ -139,7 +139,7 @@ function Contact() {
                     value={form.email}
                     onChange={handleChange}
                     required
-                    placeholder="student@cdac.in"
+                    placeholder="Enter your email address"
                   />
                 </div>
 

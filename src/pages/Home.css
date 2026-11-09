@@ -6,6 +6,9 @@
 
 .dashboard {
   font-family: "Inter", sans-serif;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
 .custom-card {

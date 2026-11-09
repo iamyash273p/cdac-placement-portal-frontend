@@ -7,11 +7,14 @@ export default function AdminNavbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  const [adminProfile, setAdminProfile] = useState({
-    name: "Placement Officer",
-    email: "admin.placement@cdac.in",
-    phone: "+91 9822011223",
-    photo: ""
+  const [adminProfile, setAdminProfile] = useState(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    return {
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      photo: user.photo || ""
+    };
   });
 
   const handlePhotoChange = (e) => {
@@ -31,7 +34,10 @@ export default function AdminNavbar() {
   };
 
   function handleLogout() {
-    navigate("/login");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("role");
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -46,10 +52,6 @@ export default function AdminNavbar() {
         </Link>
 
         <div className="admin-topbar-right">
-          <Link to="/" className="student-view-link">
-            Student View ↗
-          </Link>
-
           {/* Profile Button with Dropdown List */}
           <div className="admin-profile-dropdown">
             <button
