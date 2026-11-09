@@ -1,95 +1,44 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StudentNavbar } from "../components/Navbar/Navbar";
+import { API_BASE } from "../services/api";
 import "./Home.css";
 
 function Home() {
+  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
   const student = {
-    name: "Student",
+    id: storedUser?.id || 1,
+    name: storedUser?.name || "Aarav Deshmukh",
+    email: storedUser?.email || "aarav@cdac.in",
     course: "PG-DAC",
-    prn: "CDAC2026001"
+    prn: storedUser?.prn || "CDAC2026001"
   };
 
-  // Single On-Campus Company Drives list with corner status, interview rounds completed, date & details
-  const campusDrives = [
-    {
-      company: "TCS",
-      role: "Java Full Stack Developer",
-      package: "7.0 LPA",
-      location: "Pune",
-      date: "15 Nov 2026",
-      eligibility: "60% throughout academics",
-      status: "Shortlisted",
-      roundsCompleted: 3,
-      totalRounds: 3
-    },
-    {
-      company: "Infosys",
-      role: "Specialist Programmer",
-      package: "9.5 LPA",
-      location: "Pune / Hyderabad",
-      date: "18 Nov 2026",
-      eligibility: "No active backlogs",
-      status: "Ongoing",
-      roundsCompleted: 2,
-      totalRounds: 4
-    },
-    {
-      company: "Accenture",
-      role: "Advanced App Engineering Analyst",
-      package: "6.5 LPA",
-      location: "Mumbai",
-      date: "20 Nov 2026",
-      eligibility: "60% in Graduation",
-      status: "Shortlisted",
-      roundsCompleted: 2,
-      totalRounds: 3
-    },
-    {
-      company: "Wipro",
-      role: "Project Engineer",
-      package: "5.5 LPA",
-      location: "Pune",
-      date: "22 Nov 2026",
-      eligibility: "60% throughout academics",
-      status: "Ongoing",
-      roundsCompleted: 1,
-      totalRounds: 3
-    },
-    {
-      company: "Capgemini",
-      role: "Senior Analyst",
-      package: "7.5 LPA",
-      location: "Mumbai / Pune",
-      date: "25 Nov 2026",
-      eligibility: "65% throughout academics",
-      status: "Ongoing",
-      roundsCompleted: 1,
-      totalRounds: 4
-    },
-    {
-      company: "Siemens",
-      role: "R&D Software Engineer",
-      package: "11.0 LPA",
-      location: "Bengaluru / Pune",
-      date: "28 Nov 2026",
-      eligibility: "70% in Graduation",
-      status: "Shortlisted",
-      roundsCompleted: 3,
-      totalRounds: 4
-    }
-  ];
+  const [shortlistedDrives, setShortlistedDrives] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Calculate total interview rounds completed for the top card
-  const totalRoundsCompleted = campusDrives.reduce(
-    (sum, drive) => sum + drive.roundsCompleted,
+  useEffect(() => {
+    const queryParam = storedUser?.id
+      ? `studentId=${encodeURIComponent(storedUser.id)}`
+      : `email=${encodeURIComponent(student.email)}`;
+
+    fetch(`${API_BASE}/student/shortlisted-drives?${queryParam}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.drives)) {
+          setShortlistedDrives(data.drives);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch shortlisted drives:", err);
+      })
+      .finally(() => setLoading(false));
+  }, [storedUser?.id, student.email]);
+
+  // Calculate total interview rounds completed across shortlisted drives
+  const totalRoundsCompleted = shortlistedDrives.reduce(
+    (sum, drive) => sum + (Number(drive.rounds_completed ?? drive.roundsCompleted) || 0),
     0
   );
-
-  const getStatusBadgeStyle = (status) => {
-    if (status === "Shortlisted") return "bg-green-100 text-green-700 border-green-200";
-    if (status === "Ongoing") return "bg-amber-100 text-amber-700 border-amber-200";
-    return "bg-blue-100 text-blue-700 border-blue-200";
-  };
 
   return (
     <>
@@ -111,7 +60,7 @@ function Home() {
               Welcome back, {student.name}!
             </h1>
             <p className="text-sm text-gray-500">
-              Track your on-campus company drives and completed interview rounds.
+              Viewing placement drives where you have been shortlisted by the Admin.
             </p>
           </div>
 
@@ -122,13 +71,13 @@ function Home() {
             <div>
               <h3 className="font-semibold text-sm text-gray-900">{student.name}</h3>
               <p className="text-xs text-gray-500">
-                {student.course} | {student.prn}
+                {student.email} | {student.prn}
               </p>
             </div>
           </div>
         </section>
 
-        {/* Only Interview Rounds Count on Top */}
+        {/* Interview Rounds Count on Top */}
         <section className="mb-8">
           <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm inline-flex items-center gap-4 min-w-full sm:min-w-0 sm:w-80">
             <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-2xl">
@@ -145,91 +94,103 @@ function Home() {
           </div>
         </section>
 
-        {/* Single Card Grid: On-Campus Company Drives */}
+        {/* Shortlisted Drives Card Grid */}
         <section>
           <div className="mb-5">
             <h2 className="text-xl font-bold text-gray-900">
-              On-Campus Company Drives
+              My Shortlisted Company Drives
             </h2>
             <p className="text-xs text-gray-500">
-              Company drive status, completed interview rounds, drive dates, and package details.
+              Only drives for which the Placement Admin has shortlisted you appear below.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {campusDrives.map((job) => (
-              <article
-                key={job.company}
-                className="custom-card bg-white p-5 rounded-xl border border-gray-200 flex flex-col justify-between"
-              >
-                <div>
-                  {/* Top Corner: Logo + Status Badge (Shortlisted / Ongoing) */}
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-11 h-11 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-lg">
-                      {job.company.charAt(0)}
+          {loading ? (
+            <div className="bg-white p-8 rounded-xl border border-gray-200 text-center text-sm text-gray-500">
+              Loading your shortlisted drives...
+            </div>
+          ) : shortlistedDrives.length === 0 ? (
+            <div className="bg-white p-8 rounded-xl border border-gray-200 text-center">
+              <p className="text-base font-bold text-gray-800 mb-1">
+                No Shortlisted Drives Yet
+              </p>
+              <p className="text-xs text-gray-500">
+                Once the Admin shortlists you for a company drive in the Admin Portal, that drive card will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {shortlistedDrives.map((job) => {
+                const roundsDone = Number(job.rounds_completed ?? 2);
+                const totalRounds = Number(job.total_rounds ?? 3);
+                const driveDate = job.drive_date || job.date || "Upcoming";
+                const driveCriteria = job.criteria || "60% throughout";
+
+                return (
+                  <article
+                    key={job.id}
+                    className="custom-card bg-white p-5 rounded-xl border border-gray-200 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="w-11 h-11 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-lg">
+                          {job.company.charAt(0)}
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-xs font-bold border bg-green-100 text-green-700 border-green-200">
+                          ✓ Shortlisted
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-bold text-gray-900">{job.company}</h3>
+                      <p className="text-xs text-gray-500 mb-4">{job.role}</p>
+
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-4">
+                        <div className="flex justify-between items-center text-xs mb-1.5">
+                          <span className="text-gray-600 font-medium">
+                            Interview Rounds Completed
+                          </span>
+                          <strong className="text-blue-700">
+                            {roundsDone} / {totalRounds}
+                          </strong>
+                        </div>
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-green-600"
+                            style={{
+                              width: `${Math.min(100, (roundsDone / totalRounds) * 100)}%`
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-100 pt-3 space-y-2 text-xs">
+                        <p className="flex justify-between">
+                          <span className="text-gray-500">Drive Date</span>
+                          <strong className="text-gray-800">{driveDate}</strong>
+                        </p>
+                        <p className="flex justify-between">
+                          <span className="text-gray-500">Package</span>
+                          <strong className="text-gray-800">{job.package}</strong>
+                        </p>
+                        <p className="flex justify-between">
+                          <span className="text-gray-500">Location</span>
+                          <strong className="text-gray-800">{job.location}</strong>
+                        </p>
+                        <p className="flex justify-between">
+                          <span className="text-gray-500">Criteria</span>
+                          <strong className="text-gray-800">{driveCriteria}</strong>
+                        </p>
+                      </div>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeStyle(
-                        job.status
-                      )}`}
-                    >
-                      {job.status}
-                    </span>
-                  </div>
 
-                  {/* Company & Role */}
-                  <h3 className="text-lg font-bold text-gray-900">{job.company}</h3>
-                  <p className="text-xs text-gray-500 mb-4">{job.role}</p>
-
-                  {/* Interview Rounds Completed Box */}
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-4">
-                    <div className="flex justify-between items-center text-xs mb-1.5">
-                      <span className="text-gray-600 font-medium">
-                        Interview Rounds Completed
-                      </span>
-                      <strong className="text-blue-700">
-                        {job.roundsCompleted} / {job.totalRounds}
-                      </strong>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          job.status === "Shortlisted" ? "bg-green-600" : "bg-blue-600"
-                        }`}
-                        style={{
-                          width: `${(job.roundsCompleted / job.totalRounds) * 100}%`
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Drive Date & Other Details */}
-                  <div className="border-t border-gray-100 pt-3 space-y-2 text-xs">
-                    <p className="flex justify-between">
-                      <span className="text-gray-500">Drive Date</span>
-                      <strong className="text-gray-800">{job.date}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-gray-500">Package</span>
-                      <strong className="text-gray-800">{job.package}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-gray-500">Location</span>
-                      <strong className="text-gray-800">{job.location}</strong>
-                    </p>
-                    <p className="flex justify-between">
-                      <span className="text-gray-500">Criteria</span>
-                      <strong className="text-gray-800">{job.eligibility}</strong>
-                    </p>
-                  </div>
-                </div>
-
-                <button className="w-full mt-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition">
-                  View Drive Details
-                </button>
-              </article>
-            ))}
-          </div>
+                    <button className="w-full mt-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-semibold transition">
+                      Shortlisted for Drive
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
     </>

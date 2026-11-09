@@ -5,7 +5,8 @@ function AdminSidebar() {
   const links = [
     { name: "Dashboard", path: "/admin", icon: "📊" },
     { name: "Drives", path: "/admin/drives", icon: "💼" },
-    { name: "Students", path: "/admin/students", icon: "🎓" }
+    { name: "Students", path: "/admin/students", icon: "🎓" },
+    { name: "Student Queries", path: "/admin/queries", icon: "💬" }
   ];
 
   return (

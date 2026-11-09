@@ -1,26 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StudentNavbar } from "../components/Navbar/Navbar";
+import { API_BASE } from "../services/api";
 import "./Contact.css";
 
 function Contact() {
-  const [form, setForm] = useState({
-    name: "",
-    prn: "",
-    email: "",
-    subject: "",
-    message: ""
-  });
-  const [submitted, setSubmitted] = useState(false);
+  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setSubmitted(false);
-  }
+  const [studentName, setStudentName] = useState(storedUser?.name || "Aarav Deshmukh");
+  const [studentEmail, setStudentEmail] = useState(storedUser?.email || "aarav@cdac.in");
+  const [prn, setPrn] = useState(storedUser?.prn || "CDAC2026001");
+  const [subject, setSubject] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const [sending, setSending] = useState(false);
 
-  function handleSubmit(e) {
+  const fetchMessages = async (emailToFetch) => {
+    if (!emailToFetch) return;
+    try {
+      const res = await fetch(`${API_BASE}/queries?email=${encodeURIComponent(emailToFetch)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.queries)) {
+        setChatHistory(data.queries);
+      }
+    } catch (err) {
+      console.error("Error loading chat messages:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages(studentEmail);
+  }, [studentEmail]);
+
+  async function handleSendQuery(e) {
     e.preventDefault();
-    setSubmitted(true);
-    setForm({ name: "", prn: "", email: "", subject: "", message: "" });
+    if (!messageText.trim() || !studentEmail.trim()) return;
+
+    setSending(true);
+    try {
+      const res = await fetch(`${API_BASE}/queries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: storedUser?.id || null,
+          student_name: studentName,
+          student_email: studentEmail,
+          prn,
+          subject: subject || "Placement Support Query",
+          sender_role: "student",
+          message: messageText
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessageText("");
+        fetchMessages(studentEmail);
+      }
+    } catch (err) {
+      console.error("Failed to send query:", err);
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -29,83 +68,81 @@ function Contact() {
 
       <main className="contact-page">
         <section className="contact-header">
-          <span className="contact-eyebrow">PLACEMENT CELL SUPPORT</span>
-          <h1>Contact the CDAC Placement Team</h1>
+          <span className="contact-eyebrow">STUDENT SUPPORT & ADMIN CHAT</span>
+          <h1>Ask a Question to the Placement Admin</h1>
           <p>
-            Need assistance with company drive eligibility, PRN verification, or
-            interview schedules? Reach out to the placement cell below.
+            Send your placement queries directly to the Admin. Your messages and
+            the Admin&apos;s replies appear in real time in the conversation thread.
           </p>
         </section>
 
         <section className="contact-layout">
-          {/* Left Column: Placement Office Details */}
-          <div className="contact-info-panel">
-            <h2>Placement Office Details</h2>
-            <p className="info-subtext">
-              Students and recruiting partners can contact our placement
-              coordinators during working hours.
-            </p>
-
-            <div className="contact-info-list">
-              <div className="contact-info-item">
-                <span className="info-icon">📍</span>
-                <div>
-                  <strong>Campus Address</strong>
-                  <p>CDAC Innovation Park, Panchavati, Pashan, Pune - 411008</p>
-                </div>
+          {/* Left Column: Live Chat History with Admin */}
+          <div className="chat-thread-panel">
+            <div className="chat-thread-header">
+              <div>
+                <h2>Conversation with Admin</h2>
+                <span>Showing messages for {studentEmail}</span>
               </div>
+              <button
+                type="button"
+                className="refresh-chat-btn"
+                onClick={() => fetchMessages(studentEmail)}
+              >
+                ↻ Refresh Chat
+              </button>
+            </div>
 
-              <div className="contact-info-item">
-                <span className="info-icon">✉️</span>
-                <div>
-                  <strong>Placement Cell Email</strong>
-                  <p>placements@cdac.in</p>
-                </div>
-              </div>
-
-              <div className="contact-info-item">
-                <span className="info-icon">📞</span>
-                <div>
-                  <strong>Helpline Numbers</strong>
-                  <p>+91 20 2550 3100 / +91 98220 11223</p>
-                </div>
-              </div>
-
-              <div className="contact-info-item">
-                <span className="info-icon">🕒</span>
-                <div>
-                  <strong>Office Hours</strong>
-                  <p>Monday – Saturday: 9:30 AM to 6:00 PM</p>
-                </div>
-              </div>
+            <div className="chat-messages-box">
+              {chatHistory.length === 0 ? (
+                <p className="empty-chat-text">
+                  No messages yet. Send a question using the form on the right to start chatting with the Placement Admin.
+                </p>
+              ) : (
+                chatHistory.map((msg) => {
+                  const isAdmin = msg.sender_role === "admin";
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`chat-bubble-row ${isAdmin ? "from-admin" : "from-student"}`}
+                    >
+                      <div className="chat-bubble">
+                        <div className="chat-bubble-meta">
+                          <strong>{isAdmin ? "🛡️ Placement Admin" : `🎓 ${msg.student_name}`}</strong>
+                          {msg.subject && <span className="chat-topic-tag">{msg.subject}</span>}
+                        </div>
+                        <p>{msg.message}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
-          {/* Right Column: Student / Recruiter Inquiry Form */}
+          {/* Right Column: Send Query / Chat Input Form */}
           <div className="contact-form-panel">
-            <h2>Send a Query</h2>
+            <h2>Send a New Query / Message</h2>
 
-            <form onSubmit={handleSubmit} className="contact-form">
+            <form onSubmit={handleSendQuery} className="contact-form">
               <div className="contact-row">
                 <div className="contact-field">
-                  <label htmlFor="name">Full Name</label>
+                  <label htmlFor="name">Your Name</label>
                   <input
                     id="name"
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
                     required
                     placeholder="Enter your name"
                   />
                 </div>
 
                 <div className="contact-field">
-                  <label htmlFor="prn">PRN No (Optional)</label>
+                  <label htmlFor="prn">PRN No</label>
                   <input
                     id="prn"
-                    name="prn"
-                    value={form.prn}
-                    onChange={handleChange}
+                    value={prn}
+                    onChange={(e) => setPrn(e.target.value)}
                     placeholder="e.g. CDAC2026001"
                   />
                 </div>
@@ -113,53 +150,43 @@ function Contact() {
 
               <div className="contact-row">
                 <div className="contact-field">
-                  <label htmlFor="email">Email Address</label>
+                  <label htmlFor="email">Your Email Address</label>
                   <input
                     id="email"
-                    name="email"
                     type="email"
-                    value={form.email}
-                    onChange={handleChange}
+                    value={studentEmail}
+                    onChange={(e) => setStudentEmail(e.target.value)}
                     required
-                    placeholder="Enter your email"
+                    placeholder="aarav@cdac.in"
                   />
                 </div>
 
                 <div className="contact-field">
-                  <label htmlFor="subject">Query Topic</label>
+                  <label htmlFor="subject">Subject / Drive Name</label>
                   <input
                     id="subject"
-                    name="subject"
-                    value={form.subject}
-                    onChange={handleChange}
-                    required
-                    placeholder="e.g. Drive Eligibility / Marks Update"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. TCS Shortlist / Interview Date"
                   />
                 </div>
               </div>
 
               <div className="contact-field">
-                <label htmlFor="message">Message</label>
+                <label htmlFor="message">Your Question or Message</label>
                 <textarea
                   id="message"
-                  name="message"
                   rows="4"
-                  value={form.message}
-                  onChange={handleChange}
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
                   required
-                  placeholder="Describe your question or issue clearly..."
+                  placeholder="Type your question for the Placement Admin..."
                 />
               </div>
 
-              <button type="submit" className="contact-submit-btn">
-                Submit Query
+              <button type="submit" className="contact-submit-btn" disabled={sending}>
+                {sending ? "Sending..." : "Send Message to Admin →"}
               </button>
-
-              {submitted && (
-                <p className="contact-success-msg">
-                  ✓ Your message has been sent to the CDAC Placement Cell.
-                </p>
-              )}
             </form>
           </div>
         </section>

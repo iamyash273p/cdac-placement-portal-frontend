@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import { API_BASE } from "../services/api";
 import "./AdminDashboard.css";
-
-const API_BASE = "http://192.168.0.200:7500/api";
 
 function AdminDashboard({ defaultTab = "overview" }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [batchFilter, setBatchFilter] = useState("all");
   const [drives, setDrives] = useState([]);
   const [students, setStudents] = useState([]);
+  const [queries, setQueries] = useState([]);
+  const [selectedStudentEmail, setSelectedStudentEmail] = useState("");
+  const [adminReplyText, setAdminReplyText] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Modals state
@@ -18,40 +20,83 @@ function AdminDashboard({ defaultTab = "overview" }) {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showEditStudentModal, setShowEditStudentModal] = useState(false);
 
+  // Shortlist Students Modal State
+  const [showShortlistModal, setShowShortlistModal] = useState(false);
+  const [activeDriveForShortlist, setActiveDriveForShortlist] = useState(null);
+  const [checkedStudentIds, setCheckedStudentIds] = useState([]);
+  const [savingShortlist, setSavingShortlist] = useState(false);
+
   // Form states
   const [adminError, setAdminError] = useState("");
-  const [adminForm, setAdminForm] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
-  
+  const [adminForm, setAdminForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: ""
+  });
+
   const [studentForm, setStudentForm] = useState({
-    photo: "", name: "", email: "", phone: "", address: "", prn: "", password: "",
-    tenthMarks: "", twelfthMarks: "", degreeMarks: "", cmceMarks: "", cceeMarks: "", status: "Unplaced", passout_year: "2026"
+    photo: "",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    prn: "",
+    password: "",
+    tenthMarks: "",
+    twelfthMarks: "",
+    degreeMarks: "",
+    cmceMarks: "",
+    cceeMarks: "",
+    status: "Unplaced",
+    passout_year: "2026"
   });
 
   const [editStudentData, setEditStudentData] = useState(null);
 
   const [driveForm, setDriveForm] = useState({
-    company: "", role: "", package: "", location: "", drive_date: "", passout_year: "2026", criteria: "", status: "Active"
+    company: "",
+    role: "",
+    package: "",
+    location: "",
+    drive_date: "",
+    passout_year: "2026",
+    criteria: "",
+    status: "Active"
   });
 
   const navigate = useNavigate();
 
   const fetchData = async () => {
     try {
-      const [studentsRes, drivesRes] = await Promise.all([
+      const [studentsRes, drivesRes, queriesRes] = await Promise.all([
         fetch(`${API_BASE}/students`),
-        fetch(`${API_BASE}/drives`)
+        fetch(`${API_BASE}/drives`),
+        fetch(`${API_BASE}/queries`)
       ]);
       const studentsData = await studentsRes.json();
       const drivesData = await drivesRes.json();
+      const queriesData = await queriesRes.json();
 
       if (studentsData.success) setStudents(studentsData.students);
       if (drivesData.success) setDrives(drivesData.drives);
+      if (queriesData.success) {
+        setQueries(queriesData.queries);
+        if (!selectedStudentEmail && queriesData.queries.length > 0) {
+          setSelectedStudentEmail(queriesData.queries[0].student_email);
+        }
+      }
     } catch (err) {
       console.error("Error fetching admin data:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
 
   useEffect(() => {
     fetchData();
@@ -64,11 +109,35 @@ function AdminDashboard({ defaultTab = "overview" }) {
     batchFilter === "all" ? true : s.status === batchFilter
   );
 
+  // Group queries by student_email for the Admin Chat / Queries view
+  const studentThreads = React.useMemo(() => {
+    const map = new Map();
+    queries.forEach((q) => {
+      if (!map.has(q.student_email)) {
+        map.set(q.student_email, {
+          student_email: q.student_email,
+          student_name: q.student_name,
+          prn: q.prn,
+          lastMessage: q.message,
+          messages: []
+        });
+      }
+      const thread = map.get(q.student_email);
+      thread.lastMessage = q.message;
+      thread.messages.push(q);
+    });
+    return Array.from(map.values());
+  }, [queries]);
+
+  const activeThread = studentThreads.find(
+    (t) => t.student_email === selectedStudentEmail
+  ) || studentThreads[0];
+
   const stats = [
     { label: "Current Batch Students", value: students.length, note: "Total registered in batch", icon: "🎓" },
     { label: "Placed Students", value: placedStudents.length, note: "Offers received", icon: "✅" },
     { label: "Unplaced Students", value: unplacedStudents.length, note: "Eligible for upcoming drives", icon: "⏳" },
-    { label: "Total Drives", value: drives.length, note: "Active campus drives", icon: "💼" }
+    { label: "Student Queries", value: studentThreads.length, note: "Active chat threads", icon: "💬" }
   ];
 
   const handleTabSwitch = (tab) => {
@@ -76,6 +145,92 @@ function AdminDashboard({ defaultTab = "overview" }) {
     if (tab === "overview") navigate("/admin");
     if (tab === "drives") navigate("/admin/drives");
     if (tab === "students") navigate("/admin/students");
+    if (tab === "queries") navigate("/admin/queries");
+  };
+
+  // Open Shortlist Modal for a specific drive and load currently checked students
+  const openShortlistModal = async (drive) => {
+    setActiveDriveForShortlist(drive);
+    setShowShortlistModal(true);
+    try {
+      const res = await fetch(`${API_BASE}/drives/${drive.id}/shortlist`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.shortlistedStudentIds)) {
+        setCheckedStudentIds(data.shortlistedStudentIds);
+      } else {
+        setCheckedStudentIds([]);
+      }
+    } catch (err) {
+      setCheckedStudentIds([]);
+    }
+  };
+
+  const toggleStudentCheckbox = (studentId) => {
+    setCheckedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    if (checkedStudentIds.length === students.length) {
+      setCheckedStudentIds([]);
+    } else {
+      setCheckedStudentIds(students.map((s) => s.id));
+    }
+  };
+
+  const handleSaveShortlist = async (e) => {
+    e.preventDefault();
+    if (!activeDriveForShortlist) return;
+    setSavingShortlist(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/admin/drives/${activeDriveForShortlist.id}/shortlist`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentIds: checkedStudentIds })
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowShortlistModal(false);
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed saving shortlist:", err);
+    } finally {
+      setSavingShortlist(false);
+    }
+  };
+
+  const handleSendAdminReply = async (e) => {
+    e.preventDefault();
+    if (!adminReplyText.trim() || !activeThread) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/queries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_name: activeThread.student_name,
+          student_email: activeThread.student_email,
+          prn: activeThread.prn || "",
+          subject: "Admin Reply",
+          sender_role: "admin",
+          message: adminReplyText
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAdminReplyText("");
+        fetchData();
+      }
+    } catch (err) {
+      console.error("Failed sending reply:", err);
+    }
   };
 
   const handleCreateAdmin = async (e) => {
@@ -92,7 +247,6 @@ function AdminDashboard({ defaultTab = "overview" }) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("New admin created successfully!");
         setShowAdminModal(false);
         setAdminForm({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
         setAdminError("");
@@ -114,14 +268,11 @@ function AdminDashboard({ defaultTab = "overview" }) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("Student added successfully!");
         setShowStudentModal(false);
         fetchData();
-      } else {
-        alert(data.message || "Failed to add student.");
       }
     } catch (err) {
-      alert("Network error connecting to backend.");
+      console.error("Error adding student:", err);
     }
   };
 
@@ -148,46 +299,35 @@ function AdminDashboard({ defaultTab = "overview" }) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("Student updated successfully!");
         setShowEditStudentModal(false);
         fetchData();
-      } else {
-        alert(data.message || "Failed to update student.");
       }
     } catch (err) {
-      alert("Network error connecting to backend.");
+      console.error("Error updating student:", err);
     }
   };
 
   const handleDeleteStudent = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this student?")) return;
     try {
       const response = await fetch(`${API_BASE}/admin/students/${id}`, { method: "DELETE" });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("Student deleted successfully!");
         fetchData();
-      } else {
-        alert(data.message || "Failed to delete student.");
       }
     } catch (err) {
-      alert("Network error deleting student.");
+      console.error("Error deleting student:", err);
     }
   };
 
   const handleDeleteDrive = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this drive?")) return;
     try {
       const response = await fetch(`${API_BASE}/admin/drives/${id}`, { method: "DELETE" });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("Drive deleted successfully!");
         fetchData();
-      } else {
-        alert(data.message || "Failed to delete drive.");
       }
     } catch (err) {
-      alert("Network error deleting drive.");
+      console.error("Error deleting drive:", err);
     }
   };
 
@@ -201,14 +341,21 @@ function AdminDashboard({ defaultTab = "overview" }) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        alert("Drive created successfully!");
         setShowDriveModal(false);
+        setDriveForm({
+          company: "",
+          role: "",
+          package: "",
+          location: "",
+          drive_date: "",
+          passout_year: "2026",
+          criteria: "",
+          status: "Active"
+        });
         fetchData();
-      } else {
-        alert(data.message || "Failed to create drive.");
       }
     } catch (err) {
-      alert("Network error connecting to backend.");
+      console.error("Error creating drive:", err);
     }
   };
 
@@ -230,42 +377,70 @@ function AdminDashboard({ defaultTab = "overview" }) {
           <p className="eyebrow">ADMIN PORTAL — CURRENT BATCH 2026</p>
           <h1>
             {activeTab === "overview" && "Batch Placement Dashboard"}
-            {activeTab === "drives" && "Manage Company Drives"}
+            {activeTab === "drives" && "Manage Company Drives & Shortlisting"}
             {activeTab === "students" && "All Registered Students"}
+            {activeTab === "queries" && "Student Queries & Support Chat"}
           </h1>
           <p className="page-subtitle">
-            Track placed & unplaced students, create campus drives, and manage accounts.
+            Shortlist students for drives, answer student chat queries, and manage batch placement records.
           </p>
         </div>
 
-        <div className="header-actions-wrap" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button 
-            type="button" 
-            className="action-btn secondary-action" 
-            onClick={() => { setAdminError(""); setShowAdminModal(true); }}
-            style={{ cursor: 'pointer', zIndex: 10 }}
+        <div className="header-actions-wrap">
+          <button
+            type="button"
+            className="action-btn secondary-action"
+            onClick={() => {
+              setAdminError("");
+              setShowAdminModal(true);
+            }}
           >
             + Create New Admin
           </button>
-          <button 
-            type="button" 
-            className="action-btn primary-action" 
+          <button
+            type="button"
+            className="action-btn primary-action"
             onClick={() => setShowStudentModal(true)}
-            style={{ cursor: 'pointer', zIndex: 10 }}
           >
             + Add New Student
           </button>
 
           <div className="admin-menu-tabs">
-            <button type="button" className={`menu-tab-btn ${activeTab === "overview" ? "active" : ""}`} onClick={() => handleTabSwitch("overview")}>Dashboard</button>
-            <button type="button" className={`menu-tab-btn ${activeTab === "drives" ? "active" : ""}`} onClick={() => handleTabSwitch("drives")}>Drives</button>
-            <button type="button" className={`menu-tab-btn ${activeTab === "students" ? "active" : ""}`} onClick={() => handleTabSwitch("students")}>Students</button>
+            <button
+              type="button"
+              className={`menu-tab-btn ${activeTab === "overview" ? "active" : ""}`}
+              onClick={() => handleTabSwitch("overview")}
+            >
+              Dashboard
+            </button>
+            <button
+              type="button"
+              className={`menu-tab-btn ${activeTab === "drives" ? "active" : ""}`}
+              onClick={() => handleTabSwitch("drives")}
+            >
+              Drives
+            </button>
+            <button
+              type="button"
+              className={`menu-tab-btn ${activeTab === "students" ? "active" : ""}`}
+              onClick={() => handleTabSwitch("students")}
+            >
+              Students
+            </button>
+            <button
+              type="button"
+              className={`menu-tab-btn ${activeTab === "queries" ? "active" : ""}`}
+              onClick={() => handleTabSwitch("queries")}
+            >
+              Student Queries ({studentThreads.length})
+            </button>
           </div>
         </div>
       </div>
 
       {loading && <p>Loading portal data from database...</p>}
 
+      {/* 1. OVERVIEW TAB */}
       {!loading && activeTab === "overview" && (
         <>
           <section className="stats-grid">
@@ -285,13 +460,31 @@ function AdminDashboard({ defaultTab = "overview" }) {
             <div className="panel-heading">
               <div>
                 <h2>Current Batch — Placed & Unplaced Students</h2>
-                <p>Filter between placed and unplaced students from database</p>
+                <p>Filter between placed and unplaced students from the current batch</p>
               </div>
 
               <div className="batch-filter-pills">
-                <button type="button" className={`filter-pill ${batchFilter === "all" ? "active" : ""}`} onClick={() => setBatchFilter("all")}>All Batch ({students.length})</button>
-                <button type="button" className={`filter-pill placed ${batchFilter === "Placed" ? "active" : ""}`} onClick={() => setBatchFilter("Placed")}>Placed ({placedStudents.length})</button>
-                <button type="button" className={`filter-pill unplaced ${batchFilter === "Unplaced" ? "active" : ""}`} onClick={() => setBatchFilter("Unplaced")}>Unplaced ({unplacedStudents.length})</button>
+                <button
+                  type="button"
+                  className={`filter-pill ${batchFilter === "all" ? "active" : ""}`}
+                  onClick={() => setBatchFilter("all")}
+                >
+                  All Batch ({students.length})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill placed ${batchFilter === "Placed" ? "active" : ""}`}
+                  onClick={() => setBatchFilter("Placed")}
+                >
+                  Placed ({placedStudents.length})
+                </button>
+                <button
+                  type="button"
+                  className={`filter-pill unplaced ${batchFilter === "Unplaced" ? "active" : ""}`}
+                  onClick={() => setBatchFilter("Unplaced")}
+                >
+                  Unplaced ({unplacedStudents.length})
+                </button>
               </div>
             </div>
 
@@ -300,9 +493,9 @@ function AdminDashboard({ defaultTab = "overview" }) {
                 <thead>
                   <tr>
                     <th>Student</th>
+                    <th>Email</th>
                     <th>PRN No</th>
                     <th>Phone</th>
-                    <th>10th / 12th</th>
                     <th>Degree</th>
                     <th>CMCE / CCEE</th>
                     <th>Status</th>
@@ -314,21 +507,42 @@ function AdminDashboard({ defaultTab = "overview" }) {
                     <tr key={stu.id}>
                       <td>
                         <div className="student-name-cell">
-                          {stu.photo ? <img src={stu.photo} alt={stu.name} className="table-avatar" /> : <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>}
+                          {stu.photo ? (
+                            <img src={stu.photo} alt={stu.name} className="table-avatar" />
+                          ) : (
+                            <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>
+                          )}
                           <span className="company-cell">{stu.name}</span>
                         </div>
                       </td>
+                      <td>{stu.email}</td>
                       <td>{stu.prn}</td>
                       <td>{stu.phone || "-"}</td>
-                      <td>{stu.tenth_marks || "-"} / {stu.twelfth_marks || "-"}</td>
                       <td>{stu.degree_marks || "-"}</td>
-                      <td>{stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}</td>
                       <td>
-                        <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>{stu.status}</span>
+                        {stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}
                       </td>
                       <td>
-                        <button onClick={() => { setEditStudentData(stu); setShowEditStudentModal(true); }} style={{ marginRight: '8px', padding: '4px 8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
-                        <button onClick={() => handleDeleteStudent(stu.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                        <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>
+                          {stu.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => {
+                            setEditStudentData(stu);
+                            setShowEditStudentModal(true);
+                          }}
+                          className="table-action-btn edit"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(stu.id)}
+                          className="table-action-btn delete"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -339,14 +553,23 @@ function AdminDashboard({ defaultTab = "overview" }) {
         </>
       )}
 
+      {/* 2. DRIVES TAB (With "Shortlist Students" Button & Checkbox Popup) */}
       {!loading && activeTab === "drives" && (
         <section className="content-panel">
           <div className="panel-heading">
             <div>
-              <h2>All Placement Drives</h2>
-              <p>Active campus drives fetched from MySQL database</p>
+              <h2>All Placement Drives & Student Shortlisting</h2>
+              <p>
+                Click <strong>Shortlist Students</strong> on any drive and check the students to make that drive visible on their Student Dashboard.
+              </p>
             </div>
-            <button type="button" className="create-drive-btn" onClick={() => setShowDriveModal(true)}>+ Create Drive</button>
+            <button
+              type="button"
+              className="create-drive-btn"
+              onClick={() => setShowDriveModal(true)}
+            >
+              + Create Drive
+            </button>
           </div>
 
           <div className="table-wrap">
@@ -358,9 +581,8 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <th>Package</th>
                   <th>Location</th>
                   <th>Drive Date</th>
-                  <th>Passout Year</th>
                   <th>Criteria</th>
-                  <th>Status</th>
+                  <th>Shortlisted Students</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -372,13 +594,29 @@ function AdminDashboard({ defaultTab = "overview" }) {
                     <td>{drive.package}</td>
                     <td>{drive.location}</td>
                     <td>{drive.drive_date || "-"}</td>
-                    <td>{drive.passout_year || "-"}</td>
                     <td>{drive.criteria || "-"}</td>
                     <td>
-                      <span className={`status-pill ${drive.status.toLowerCase()}`}>{drive.status}</span>
+                      <span className="status-pill active">
+                        {drive.shortlisted_count || 0} Student(s) Shortlisted
+                      </span>
                     </td>
                     <td>
-                      <button onClick={() => handleDeleteDrive(drive.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => openShortlistModal(drive)}
+                          className="shortlist-drive-btn"
+                        >
+                          ☑️ Shortlist Students
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDrive(drive.id)}
+                          className="table-action-btn delete"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -388,14 +626,21 @@ function AdminDashboard({ defaultTab = "overview" }) {
         </section>
       )}
 
+      {/* 3. STUDENTS TAB */}
       {!loading && activeTab === "students" && (
         <section className="content-panel">
           <div className="panel-heading">
             <div>
               <h2>All Registered Students</h2>
-              <p>Complete directory from database</p>
+              <p>Complete student directory from the MySQL database</p>
             </div>
-            <button type="button" className="create-drive-btn" onClick={() => setShowStudentModal(true)}>+ Add New Student</button>
+            <button
+              type="button"
+              className="create-drive-btn"
+              onClick={() => setShowStudentModal(true)}
+            >
+              + Add New Student
+            </button>
           </div>
 
           <div className="table-wrap">
@@ -403,6 +648,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
               <thead>
                 <tr>
                   <th>Student</th>
+                  <th>Email</th>
                   <th>PRN No</th>
                   <th>Phone</th>
                   <th>10th / 12th</th>
@@ -417,21 +663,45 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <tr key={stu.id}>
                     <td>
                       <div className="student-name-cell">
-                        {stu.photo ? <img src={stu.photo} alt={stu.name} className="table-avatar" /> : <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>}
+                        {stu.photo ? (
+                          <img src={stu.photo} alt={stu.name} className="table-avatar" />
+                        ) : (
+                          <span className="table-avatar-placeholder">{stu.name.charAt(0)}</span>
+                        )}
                         <span className="company-cell">{stu.name}</span>
                       </div>
                     </td>
+                    <td>{stu.email}</td>
                     <td>{stu.prn}</td>
                     <td>{stu.phone || "-"}</td>
-                    <td>{stu.tenth_marks || "-"} / {stu.twelfth_marks || "-"}</td>
-                    <td>{stu.degree_marks || "-"}</td>
-                    <td>{stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}</td>
                     <td>
-                      <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>{stu.status}</span>
+                      {stu.tenth_marks || "-"} / {stu.twelfth_marks || "-"}
+                    </td>
+                    <td>{stu.degree_marks || "-"}</td>
+                    <td>
+                      {stu.cmce_marks || "-"} / {stu.ccee_marks || "-"}
                     </td>
                     <td>
-                      <button onClick={() => { setEditStudentData(stu); setShowEditStudentModal(true); }} style={{ marginRight: '8px', padding: '4px 8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Edit</button>
-                      <button onClick={() => handleDeleteStudent(stu.id)} style={{ padding: '4px 8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Delete</button>
+                      <span className={`status-pill ${stu.status === "Placed" ? "active" : "pending"}`}>
+                        {stu.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => {
+                          setEditStudentData(stu);
+                          setShowEditStudentModal(true);
+                        }}
+                        className="table-action-btn edit"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStudent(stu.id)}
+                        className="table-action-btn delete"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -439,6 +709,184 @@ function AdminDashboard({ defaultTab = "overview" }) {
             </table>
           </div>
         </section>
+      )}
+
+      {/* 4. STUDENT QUERIES / CHAT SYSTEM TAB */}
+      {!loading && activeTab === "queries" && (
+        <section className="content-panel">
+          <div className="panel-heading">
+            <div>
+              <h2>Student Queries & Support Chat</h2>
+              <p>View questions submitted from the Student Contact page and reply directly</p>
+            </div>
+            <button type="button" className="action-btn secondary-action" onClick={fetchData}>
+              ↻ Refresh Queries
+            </button>
+          </div>
+
+          {studentThreads.length === 0 ? (
+            <p style={{ color: "#64748b", fontSize: "13px" }}>
+              No student queries have been submitted yet.
+            </p>
+          ) : (
+            <div className="admin-chat-container">
+              {/* Left Sidebar: Student Thread List */}
+              <div className="admin-chat-sidebar">
+                {studentThreads.map((thread) => (
+                  <button
+                    key={thread.student_email}
+                    type="button"
+                    className={`admin-thread-item ${
+                      activeThread?.student_email === thread.student_email ? "active" : ""
+                    }`}
+                    onClick={() => setSelectedStudentEmail(thread.student_email)}
+                  >
+                    <div className="thread-avatar">
+                      {thread.student_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="thread-meta">
+                      <strong>{thread.student_name}</strong>
+                      <span>{thread.student_email}</span>
+                      <p>{thread.lastMessage}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Right Chat Window */}
+              {activeThread && (
+                <div className="admin-chat-window">
+                  <div className="admin-chat-header">
+                    <div>
+                      <h3>{activeThread.student_name}</h3>
+                      <span>
+                        {activeThread.student_email} {activeThread.prn ? `• PRN: ${activeThread.prn}` : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="admin-chat-messages">
+                    {activeThread.messages.map((msg) => {
+                      const isAdmin = msg.sender_role === "admin";
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`admin-msg-row ${isAdmin ? "sent" : "received"}`}
+                        >
+                          <div className="admin-msg-bubble">
+                            <div className="admin-msg-top">
+                              <strong>{isAdmin ? "You (Admin)" : msg.student_name}</strong>
+                              {msg.subject && <span>{msg.subject}</span>}
+                            </div>
+                            <p>{msg.message}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <form onSubmit={handleSendAdminReply} className="admin-chat-input-bar">
+                    <input
+                      type="text"
+                      placeholder={`Reply to ${activeThread.student_name}...`}
+                      value={adminReplyText}
+                      onChange={(e) => setAdminReplyText(e.target.value)}
+                      required
+                    />
+                    <button type="submit" className="create-drive-btn">
+                      Send Reply →
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* SHORTLIST STUDENTS CHECKBOX MODAL */}
+      {showShortlistModal && activeDriveForShortlist && (
+        <div className="modal-backdrop" onClick={() => setShowShortlistModal(false)}>
+          <div className="modal-box student-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Shortlist Students — {activeDriveForShortlist.company}</h3>
+                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
+                  Check the students below. Checked students will see the{" "}
+                  <strong>{activeDriveForShortlist.company} ({activeDriveForShortlist.role})</strong>{" "}
+                  drive card on their Student Dashboard.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="close-modal-btn"
+                onClick={() => setShowShortlistModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveShortlist}>
+              <div className="shortlist-toolbar">
+                <label className="select-all-label">
+                  <input
+                    type="checkbox"
+                    checked={
+                      students.length > 0 && checkedStudentIds.length === students.length
+                    }
+                    onChange={handleSelectAllStudents}
+                  />
+                  <span>Select All Students ({students.length})</span>
+                </label>
+                <span className="selected-count-badge">
+                  {checkedStudentIds.length} Selected
+                </span>
+              </div>
+
+              <div className="shortlist-student-list">
+                {students.map((stu) => {
+                  const isChecked = checkedStudentIds.includes(stu.id);
+                  return (
+                    <label
+                      key={stu.id}
+                      className={`shortlist-student-row ${isChecked ? "checked" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleStudentCheckbox(stu.id)}
+                      />
+                      <div className="shortlist-stu-info">
+                        <strong>
+                          {stu.name} <span className="prn-tag">({stu.prn})</span>
+                        </strong>
+                        <span>
+                          {stu.email} • Degree: {stu.degree_marks || "-"} • CCEE: {stu.ccee_marks || "-"}
+                        </span>
+                      </div>
+                      <span className={`status-pill ${isChecked ? "active" : "pending"}`}>
+                        {isChecked ? "Shortlisted" : "Not Selected"}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: "16px" }}>
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => setShowShortlistModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="submit-drive-btn" disabled={savingShortlist}>
+                  {savingShortlist ? "Saving..." : "Save Shortlisted Students"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* EDIT STUDENT MODAL */}
@@ -511,7 +959,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <input type="text" value={editStudentData.company || ""} onChange={(e) => setEditStudentData({ ...editStudentData, company: e.target.value })} />
                 </div>
               </div>
-              <div className="modal-actions" style={{ marginTop: '1rem' }}>
+              <div className="modal-actions" style={{ marginTop: "1rem" }}>
                 <button type="button" className="cancel-btn" onClick={() => setShowEditStudentModal(false)}>Cancel</button>
                 <button type="submit" className="submit-drive-btn">Update Student</button>
               </div>
@@ -528,7 +976,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
               <h3>Create New Admin</h3>
               <button type="button" className="close-modal-btn" onClick={() => setShowAdminModal(false)}>✕</button>
             </div>
-            {adminError && <div style={{ marginBottom: '12px', padding: '10px', background: '#fff0f0', color: '#a32626', borderRadius: '7px', fontSize: '12px', fontWeight: 600 }}>{adminError}</div>}
+            {adminError && <div style={{ marginBottom: "12px", padding: "10px", background: "#fff0f0", color: "#a32626", borderRadius: "7px", fontSize: "12px", fontWeight: 600 }}>{adminError}</div>}
             <form onSubmit={handleCreateAdmin} className="drive-form">
               <div className="form-group">
                 <label>Admin Name</label>
@@ -537,7 +985,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>Email Address</label>
-                  <input type="email" required placeholder="admin@cdac.gov.in" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
+                  <input type="email" required placeholder="admin@cdac.in" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} />
                 </div>
                 <div className="form-group">
                   <label>Phone Number</label>
@@ -575,7 +1023,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>Student Photo</label>
-                  <input type="file" accept="image/*" onChange={handleStudentPhotoUpload} style={{ padding: '6px' }} />
+                  <input type="file" accept="image/*" onChange={handleStudentPhotoUpload} style={{ padding: "6px" }} />
                 </div>
                 <div className="form-group">
                   <label>Full Name</label>
@@ -585,7 +1033,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
               <div className="form-row">
                 <div className="form-group">
                   <label>PRN No</label>
-                  <input type="text" required placeholder="e.g. CDAC2026001" value={studentForm.prn} onChange={(e) => setStudentForm({ ...studentForm, prn: e.target.value })} />
+                  <input type="text" required placeholder="e.g. CDAC2026005" value={studentForm.prn} onChange={(e) => setStudentForm({ ...studentForm, prn: e.target.value })} />
                 </div>
                 <div className="form-group">
                   <label>Email Address</label>
@@ -630,7 +1078,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <input type="text" placeholder="85" value={studentForm.cceeMarks} onChange={(e) => setStudentForm({ ...studentForm, cceeMarks: e.target.value })} />
                 </div>
               </div>
-              <div className="modal-actions" style={{ marginTop: '8px' }}>
+              <div className="modal-actions" style={{ marginTop: "8px" }}>
                 <button type="button" className="cancel-btn" onClick={() => setShowStudentModal(false)}>Cancel</button>
                 <button type="submit" className="submit-drive-btn">Save Student</button>
               </div>
@@ -664,9 +1112,9 @@ function AdminDashboard({ defaultTab = "overview" }) {
                   <label>Package (CTC)</label>
                   <input type="text" required placeholder="e.g. 7.0 LPA" value={driveForm.package} onChange={(e) => setDriveForm({ ...driveForm, package: e.target.value })} />
                 </div>
-                <div className="query-group form-group">
+                <div className="form-group">
                   <label>Location</label>
-                  <input type="text" required placeholder="e.g. Jabalpur / Pune" value={driveForm.location} onChange={(e) => setDriveForm({ ...driveForm, location: e.target.value })} />
+                  <input type="text" required placeholder="e.g. Pune" value={driveForm.location} onChange={(e) => setDriveForm({ ...driveForm, location: e.target.value })} />
                 </div>
               </div>
 
@@ -695,7 +1143,7 @@ function AdminDashboard({ defaultTab = "overview" }) {
                 </div>
               </div>
 
-              <div className="modal-actions" style={{ marginTop: '1rem' }}>
+              <div className="modal-actions" style={{ marginTop: "1rem" }}>
                 <button type="button" className="cancel-btn" onClick={() => setShowDriveModal(false)}>Cancel</button>
                 <button type="submit" className="submit-drive-btn">Save Drive</button>
               </div>

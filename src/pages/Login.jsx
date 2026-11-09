@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PublicNavbar } from "../components/Navbar/Navbar";
+import { API_BASE } from "../services/api";
 import "./Login.css";
-
-const API_BASE = "http://192.168.0.200:7500/api";
 
 function Login() {
   const navigate = useNavigate();
   const [loginType, setLoginType] = useState("student");
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ function Login() {
 
   function switchLoginType() {
     setLoginType(isStudent ? "admin" : "student");
-    setIdentifier("");
+    setEmail("");
     setPassword("");
     setMessage("");
   }
@@ -26,15 +26,11 @@ function Login() {
     setLoading(true);
     setMessage("");
 
-    const payload = isStudent 
-      ? { prn: identifier, password } 
-      : { email: identifier, password };
-
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ email, password })
       });
       const data = await response.json();
 
@@ -42,15 +38,16 @@ function Login() {
         setMessage("Login successful! Redirecting...");
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
-        
+        localStorage.setItem("role", data.role);
+
         setTimeout(() => {
           navigate(data.role === "admin" || !isStudent ? "/admin" : "/student-dashboard");
-        }, 1000);
+        }, 700);
       } else {
-        setMessage(data.message || "Invalid credentials.");
+        setMessage(data.message || "Invalid email or password.");
       }
     } catch (err) {
-      setMessage("Network error. Could not connect to backend server.");
+      setMessage("Network error. Make sure backend server is running on port 7500.");
     } finally {
       setLoading(false);
     }
@@ -58,13 +55,20 @@ function Login() {
 
   return (
     <div className="admin-register-page">
+      <PublicNavbar />
       <main className="admin-register-main">
         <section className="admin-register-card login-card">
           <div className="admin-register-heading">
-            <div className="admin-register-icon" aria-hidden="true">{isStudent ? "S" : "A"}</div>
+            <div className="admin-register-icon" aria-hidden="true">
+              {isStudent ? "S" : "A"}
+            </div>
             <span className="admin-register-eyebrow">CDAC PLACEMENT PORTAL</span>
             <h1>{isStudent ? "Student Login" : "Admin Login"}</h1>
-            <p>{isStudent ? "Sign in using your PRN and password." : "Sign in using your admin email and password."}</p>
+            <p>
+              {isStudent
+                ? "Sign in using your registered student email and password."
+                : "Sign in using your admin email and password."}
+            </p>
           </div>
 
           <button className="login-switch" type="button" onClick={switchLoginType}>
@@ -74,14 +78,18 @@ function Login() {
 
           <form className="admin-register-form" onSubmit={handleSubmit}>
             <div className="admin-form-field">
-              <label htmlFor="login-identifier">{isStudent ? "PRN" : "Email address"}</label>
+              <label htmlFor="login-email">Email Address</label>
               <input
-                id="login-identifier"
-                type={isStudent ? "text" : "email"}
-                name="identifier"
-                placeholder={isStudent ? "Enter your PRN" : "admin@cdac.gov.in"}
-                value={identifier}
-                onChange={(event) => { setIdentifier(event.target.value); setMessage(""); }}
+                id="login-email"
+                type="email"
+                name="email"
+                placeholder={isStudent ? "aarav@cdac.in" : "admin@cdac.in"}
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setMessage("");
+                }}
+                autoComplete="email"
                 required
               />
             </div>
@@ -94,22 +102,34 @@ function Login() {
                 name="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(event) => { setPassword(event.target.value); setMessage(""); }}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setMessage("");
+                }}
+                autoComplete="current-password"
                 required
               />
             </div>
 
             {message && (
-              <p className={`admin-form-message ${message.includes("successful") ? "success" : "error"}`} role="status">
+              <p
+                className={`admin-form-message ${
+                  message.includes("successful") ? "success" : "error"
+                }`}
+                role="status"
+              >
                 {message}
               </p>
             )}
 
             <button className="admin-register-submit" type="submit" disabled={loading}>
-              {loading ? "Signing in..." : `Login as ${isStudent ? "Student" : "Admin"}`} <span aria-hidden="true">→</span>
+              {loading ? "Signing in..." : `Login as ${isStudent ? "Student" : "Admin"}`}{" "}
+              <span aria-hidden="true">→</span>
             </button>
           </form>
-          <p className="admin-register-footer">Need help accessing your account? Contact the placement team.</p>
+          <p className="admin-register-footer">
+            Demo Credentials — Student: <strong>aarav@cdac.in</strong> / <strong>student123</strong> | Admin: <strong>admin@cdac.in</strong> / <strong>admin123</strong>
+          </p>
         </section>
         <p className="admin-register-note">Secure access · CDAC Placement Portal</p>
       </main>
