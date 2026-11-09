@@ -6,7 +6,7 @@ function AdminSidebar() {
     { name: "Dashboard", path: "/admin", icon: "📊" },
     { name: "Drives", path: "/admin/drives", icon: "💼" },
     { name: "Students", path: "/admin/students", icon: "🎓" },
-    { name: "Student Queries", path: "/admin/queries", icon: "💬" }
+    { name: "Admins", path: "/admin/admins", icon: "🛡️" }
   ];
 
   return (
@@ -18,7 +18,7 @@ function AdminSidebar() {
             <NavLink
               key={link.path}
               to={link.path}
-              end={link.path === "/admin"}
+              end={link.path === "/admin" || link.path === "/admin/admins"}
               className={({ isActive }) =>
                 isActive ? "admin-sidebar-link active" : "admin-sidebar-link"
               }

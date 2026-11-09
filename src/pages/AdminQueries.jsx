@@ -1,6 +1,6 @@
-import React from "react";
-import AdminDashboard from "./AdminDashboard";
+import React from 'react';
+import AdminDashboard from './AdminDashboard';
 
 export default function AdminQueries() {
-  return <AdminDashboard defaultTab="queries" />;
+  return <AdminDashboard initialTab="queries" />;
 }

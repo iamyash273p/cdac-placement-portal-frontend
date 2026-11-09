@@ -7,6 +7,7 @@ import AdminRegister from "../pages/AdminRegister";
 import AdminDashboard from "../pages/AdminDashboard";
 import AdminDrives from "../pages/AdminDrives";
 import AdminStudents from "../pages/AdminStudents";
+import AdminAdmins from "../pages/AdminAdmins"; // <-- 1. Import your AdminAdmins component
 import AdminQueries from "../pages/AdminQueries";
 
 function AppRoutes() {
@@ -25,6 +26,7 @@ function AppRoutes() {
         <Route path="/admin" element={<AdminDashboard defaultTab="overview" />} />
         <Route path="/admin/drives" element={<AdminDrives />} />
         <Route path="/admin/students" element={<AdminStudents />} />
+        <Route path="/admin/admins" element={<AdminAdmins />} /> {/* <-- 2. Add this route */}
         <Route path="/admin/queries" element={<AdminQueries />} />
 
         {/* Fallback */}
