@@ -13,14 +13,36 @@ function Home() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const isStudent = Boolean(token && role === "student");
-  const storedUser = JSON.parse(localStorage.getItem("user") || "null");
-  const student = storedUser || {};
+  const [student, setStudent] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null") || {};
+    } catch (error) {
+      console.error("Failed to load stored student profile:", error);
+      return {};
+    }
+  });
 
   const [shortlistedDrives, setShortlistedDrives] = useState([]);
   const [loading, setLoading] = useState(Boolean(student.id || student.email));
 
   useEffect(() => {
     if (!isStudent) return;
+
+    fetch(`${API_BASE}/students`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Unable to load student profile.");
+        }
+        const freshStudent = data.students.find(
+          (item) => Number(item.id) === Number(student.id) || item.email === student.email
+        );
+        if (freshStudent) {
+          setStudent(freshStudent);
+          localStorage.setItem("user", JSON.stringify(freshStudent));
+        }
+      })
+      .catch((err) => console.error("Failed to refresh student profile:", err));
 
     const params = new URLSearchParams();
     if (student.id) {
@@ -44,11 +66,10 @@ function Home() {
       .finally(() => setLoading(false));
   }, [isStudent, student.id, student.email]);
 
-  // Calculate total interview rounds completed across shortlisted drives
-  const totalRoundsCompleted = shortlistedDrives.reduce(
-    (sum, drive) => sum + (Number(drive.rounds_completed ?? drive.roundsCompleted) || 0),
-    0
-  );
+  const allocatedCalls = Number.parseInt(student.calls, 10) || 0;
+  const usedCalls = Number(student.calls_used) || 0;
+  const remainingCalls = Math.max(0, allocatedCalls - usedCalls);
+  const placementStatus = String(student.status || "Unplaced").trim();
 
   if (!isStudent) {
     return <Navigate to={token && role === "admin" ? "/admin" : "/login"} replace />;
@@ -93,20 +114,23 @@ function Home() {
           </div>
         </section>
 
-        {/* Interview Rounds Count on Top */}
-        <section className="mb-8">
-          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm inline-flex items-center gap-4 min-w-full sm:min-w-0 sm:w-80">
-            <div className="w-12 h-12 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center text-2xl">
-              🎙️
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Interview Rounds Completed
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Placement Status</p>
+            <p className={`mt-2 text-xl font-bold ${placementStatus.toLowerCase() === "placed" ? "text-green-700" : "text-amber-700"}`}>
+              {placementStatus}
+            </p>
+          </div>
+          <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Calls Left</p>
+            <p className="mt-2 text-xl font-bold text-blue-700">
+              {student.calls ? remainingCalls : "Pending"}
+            </p>
+            {student.calls && (
+              <p className="mt-1 text-xs text-gray-500">
+                {usedCalls} used of {allocatedCalls} allocated
               </p>
-              <h2 className="text-2xl font-extrabold text-gray-900">
-                {String(totalRoundsCompleted).padStart(2, "0")} Rounds
-              </h2>
-            </div>
+            )}
           </div>
         </section>
 
@@ -137,10 +161,8 @@ function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {shortlistedDrives.map((job) => {
-                const roundsDone = Number(job.rounds_completed ?? 2);
-                const totalRounds = Number(job.total_rounds ?? 3);
-                const driveDate = job.drive_date || job.date || "Upcoming";
-                const driveCriteria = job.criteria || "60% throughout";
+                const driveDate = job.drive_date || "Not set";
+                const driveCriteria = job.criteria || "Not specified";
 
                 return (
                   <article
@@ -159,25 +181,6 @@ function Home() {
 
                       <h3 className="text-lg font-bold text-gray-900">{job.company}</h3>
                       <p className="text-xs text-gray-500 mb-4">{job.role}</p>
-
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-4">
-                        <div className="flex justify-between items-center text-xs mb-1.5">
-                          <span className="text-gray-600 font-medium">
-                            Interview Rounds Completed
-                          </span>
-                          <strong className="text-blue-700">
-                            {roundsDone} / {totalRounds}
-                          </strong>
-                        </div>
-                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-green-600"
-                            style={{
-                              width: `${Math.min(100, (roundsDone / totalRounds) * 100)}%`
-                            }}
-                          ></div>
-                        </div>
-                      </div>
 
                       <div className="border-t border-gray-100 pt-3 space-y-2 text-xs">
                         <p className="flex justify-between">

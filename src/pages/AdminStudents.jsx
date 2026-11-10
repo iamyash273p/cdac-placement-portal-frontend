@@ -11,6 +11,9 @@ const studentMarkFields = [
   ['ccee_marks', 'CCEE Marks (%)']
 ];
 
+const studentEmailPattern = '^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$';
+const studentPhonePattern = '[0-9]{10}';
+
 const normalizeMarkInput = (value) => {
   const match = String(value ?? '').match(/^\s*(\d+(?:\.\d+)?)/);
   return match ? match[1] : '';
@@ -24,6 +27,10 @@ export default function AdminStudents() {
   const [csvFile, setCsvFile] = useState(null);
   const [formError, setFormError] = useState('');
   const [savingStudent, setSavingStudent] = useState(false);
+  const [shortlistedDriveStudent, setShortlistedDriveStudent] = useState(null);
+  const [shortlistedDrives, setShortlistedDrives] = useState([]);
+  const [shortlistedDrivesLoading, setShortlistedDrivesLoading] = useState(false);
+  const [shortlistedDrivesError, setShortlistedDrivesError] = useState('');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,6 +60,25 @@ export default function AdminStudents() {
   const fetchStudents = async () => {
     const res = await fetch(`${API_BASE}/students`).then((r) => r.json());
     if (res.success) setStudents(res.students || []);
+  };
+
+  const openShortlistedDrives = async (student) => {
+    setShortlistedDriveStudent(student);
+    setShortlistedDrives([]);
+    setShortlistedDrivesError('');
+    setShortlistedDrivesLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/student/shortlisted-drives?studentId=${student.id}`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to load shortlisted drives.');
+      }
+      setShortlistedDrives(data.drives || []);
+    } catch (error) {
+      setShortlistedDrivesError(error.message || 'Unable to load shortlisted drives.');
+    } finally {
+      setShortlistedDrivesLoading(false);
+    }
   };
 
   const handleAdd = async (e) => {
@@ -244,6 +270,7 @@ export default function AdminStudents() {
                 <th style={{ padding: '12px' }}>Role</th>
                 <th style={{ padding: '12px' }}>Status</th>
                 <th style={{ padding: '12px' }}>Calls Left</th>
+                <th style={{ padding: '12px' }}>Shortlisted Drives</th>
                 <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -260,6 +287,15 @@ export default function AdminStudents() {
                     <td style={{ padding: '12px', color: '#1d4ed8', fontWeight: 600 }}>{stu.role ? stu.role.charAt(0).toUpperCase() + stu.role.slice(1) : 'Student'}</td>
                     <td style={{ padding: '12px' }}>{stu.status}</td>
                     <td style={{ padding: '12px', fontWeight: 600, color: '#1d4ed8' }}>{left} / {totalCalls}</td>
+                    <td style={{ padding: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => openShortlistedDrives(stu)}
+                        style={{ background: '#dbeafe', color: '#1e40af', border: 'none', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        View Drives ({stu.shortlisted_companies?.length || 0})
+                      </button>
+                    </td>
                     <td style={{ padding: '12px', textAlign: 'right' }}>
                       <button onClick={() => openEditModal(stu)} style={{ background: '#e0e7ff', color: '#3730a3', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, marginRight: '6px' }}>
                         Edit
@@ -301,6 +337,43 @@ export default function AdminStudents() {
           </div>
         </div>
 
+        {shortlistedDriveStudent && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '16px' }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '14px', width: '520px', maxWidth: '100%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', color: '#0f172a' }}>
+                Shortlisted Drives — {shortlistedDriveStudent.name}
+              </h2>
+              <p style={{ margin: '6px 0 12px', color: '#64748b', fontSize: '13px' }}>
+                PRN: {shortlistedDriveStudent.prn}
+              </p>
+              {shortlistedDrivesError && <p role="alert" style={{ color: '#b91c1c' }}>{shortlistedDrivesError}</p>}
+              <div style={{ overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px', marginBottom: '16px' }}>
+                {shortlistedDrivesLoading ? (
+                  <p style={{ color: '#64748b', textAlign: 'center' }}>Loading drives…</p>
+                ) : shortlistedDrivesError ? null : shortlistedDrives.length ? (
+                  shortlistedDrives.map((drive) => (
+                    <div key={drive.id} style={{ padding: '10px 4px', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>
+                      <strong>{drive.company}</strong>
+                      <div style={{ color: '#64748b', marginTop: '3px' }}>
+                        {drive.role} · {drive.package} · {drive.location}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#64748b', textAlign: 'center' }}>No shortlisted drives.</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShortlistedDriveStudent(null)}
+                style={{ alignSelf: 'flex-end', padding: '8px 14px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {(showAddModal || showEditModal) && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
             <form
@@ -317,16 +390,19 @@ export default function AdminStudents() {
                   ['name', 'Full Name', true],
                   ['prn', 'PRN Number', true],
                   ['email', 'Email Address', true],
-                  ['phone', 'Phone Number', false],
-                  ...studentMarkFields
+                  ['phone', 'Phone Number', true],
+                  ...studentMarkFields.map(([field, label]) => [field, label, true])
                 ].map(([field, label, required]) => (
                   <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
                     {label}{required ? ' *' : ''}
                     <input
-                      type={field === 'email' ? 'email' : studentMarkFields.some(([markField]) => markField === field) ? 'number' : 'text'}
+                      type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : studentMarkFields.some(([markField]) => markField === field) ? 'number' : 'text'}
                       min={studentMarkFields.some(([markField]) => markField === field) ? '0' : undefined}
                       max={studentMarkFields.some(([markField]) => markField === field) ? '100' : undefined}
                       step={studentMarkFields.some(([markField]) => markField === field) ? '0.01' : undefined}
+                      pattern={field === 'email' ? studentEmailPattern : field === 'phone' ? studentPhonePattern : undefined}
+                      maxLength={field === 'phone' ? 10 : undefined}
+                      inputMode={field === 'phone' ? 'numeric' : undefined}
                       required={required}
                       value={studentForm[field]}
                       onChange={(e) => setStudentForm({ ...studentForm, [field]: e.target.value })}
@@ -340,6 +416,7 @@ export default function AdminStudents() {
                     <input
                       type="password"
                       required
+                      minLength={8}
                       value={studentForm.password}
                       onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a' }}
@@ -347,8 +424,9 @@ export default function AdminStudents() {
                   </label>
                 )}
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
-                  Placement Status
+                  Placement Status *
                   <select
+                    required
                     value={studentForm.status}
                     onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value })}
                     style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a', background: '#fff' }}

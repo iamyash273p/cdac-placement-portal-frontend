@@ -54,14 +54,12 @@ export default function AdminAdmins() {
   const handleDeleteAdmin = async (id) => {
     if (!window.confirm('Are you sure you want to delete this admin account?')) return;
     try {
-      const res = await fetch(`${API_BASE}/admin/admins/${id}`, { method: 'DELETE' }).then((r) => r.json());
-      if (res.success) {
-        fetchAdmins();
-      } else {
-        alert('Failed to delete admin.');
-      }
+      const response = await fetch(`${API_BASE}/admin/admins/${id}`, { method: 'DELETE' });
+      const res = await response.json();
+      if (!response.ok || !res.success) throw new Error(res.message || 'Failed to delete admin.');
+      fetchAdmins();
     } catch (err) {
-      alert('Error deleting admin.');
+      alert(err.message || 'Error deleting admin.');
     }
   };
 
