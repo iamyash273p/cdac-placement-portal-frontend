@@ -11,6 +11,9 @@ const studentMarkFields = [
   ['ccee_marks', 'CCEE Marks (%)']
 ];
 
+const studentEmailPattern = '^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$';
+const studentPhonePattern = '[0-9]{10}';
+
 const normalizeMarkInput = (value) => {
   const match = String(value ?? '').match(/^\s*(\d+(?:\.\d+)?)/);
   return match ? match[1] : '';
@@ -387,16 +390,19 @@ export default function AdminStudents() {
                   ['name', 'Full Name', true],
                   ['prn', 'PRN Number', true],
                   ['email', 'Email Address', true],
-                  ['phone', 'Phone Number', false],
-                  ...studentMarkFields
+                  ['phone', 'Phone Number', true],
+                  ...studentMarkFields.map(([field, label]) => [field, label, true])
                 ].map(([field, label, required]) => (
                   <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
                     {label}{required ? ' *' : ''}
                     <input
-                      type={field === 'email' ? 'email' : studentMarkFields.some(([markField]) => markField === field) ? 'number' : 'text'}
+                      type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : studentMarkFields.some(([markField]) => markField === field) ? 'number' : 'text'}
                       min={studentMarkFields.some(([markField]) => markField === field) ? '0' : undefined}
                       max={studentMarkFields.some(([markField]) => markField === field) ? '100' : undefined}
                       step={studentMarkFields.some(([markField]) => markField === field) ? '0.01' : undefined}
+                      pattern={field === 'email' ? studentEmailPattern : field === 'phone' ? studentPhonePattern : undefined}
+                      maxLength={field === 'phone' ? 10 : undefined}
+                      inputMode={field === 'phone' ? 'numeric' : undefined}
                       required={required}
                       value={studentForm[field]}
                       onChange={(e) => setStudentForm({ ...studentForm, [field]: e.target.value })}
@@ -410,6 +416,7 @@ export default function AdminStudents() {
                     <input
                       type="password"
                       required
+                      minLength={8}
                       value={studentForm.password}
                       onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
                       style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a' }}
@@ -417,8 +424,9 @@ export default function AdminStudents() {
                   </label>
                 )}
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: '#475569', fontSize: '12px', fontWeight: 600 }}>
-                  Placement Status
+                  Placement Status *
                   <select
+                    required
                     value={studentForm.status}
                     onChange={(e) => setStudentForm({ ...studentForm, status: e.target.value })}
                     style={{ width: '100%', boxSizing: 'border-box', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a', background: '#fff' }}
