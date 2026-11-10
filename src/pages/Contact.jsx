@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { StudentNavbar } from "../components/Navbar/Navbar";
 import "./Contact.css";
 
-const SUPPORT_EMAIL = "placements@cdac.in";
+const ADMIN_GMAIL =
+  "piyush.kolhe.cmaug26@gmail.com,vivek.tripathi.cmaug26@gmail.com,yash.patel.cmaug26@gmail.com";
 
 function Contact() {
   const storedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -24,7 +25,6 @@ function Contact() {
   function handleSubmit(e) {
     e.preventDefault();
 
-    // Compose email to CDAC Placement Support
     const mailSubject = encodeURIComponent(
       `[CDAC Placement Query] ${form.subject} (${form.prn || form.name})`
     );
@@ -32,7 +32,12 @@ function Contact() {
       `Student Name: ${form.name}\nPRN No: ${form.prn || "N/A"}\nStudent Email: ${form.email}\n\nQuery / Question:\n${form.message}`
     );
 
-    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${mailSubject}&body=${mailBody}`;
+    // Opens Gmail Web Compose directly in a new tab addressed to all 3 Admin Gmails
+    const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+      ADMIN_GMAIL
+    )}&su=${mailSubject}&body=${mailBody}`;
+
+    window.open(gmailComposeUrl, "_blank", "noopener,noreferrer");
     setSubmitted(true);
     setForm({ ...form, subject: "", message: "" });
   }
@@ -47,7 +52,7 @@ function Contact() {
           <h1>Contact CDAC Placement Support</h1>
           <p>
             Have a question regarding placement drives, eligibility, or academic
-            verification? Send your query directly to our support email below.
+            verification? Send your query directly to the Admin&apos;s Gmail below.
           </p>
         </section>
 
@@ -57,19 +62,37 @@ function Contact() {
             <h2>CDAC Placement Cell</h2>
             <p className="info-subtext">
               All student placement queries are handled via our official
-              placement support email desk.
+              placement admin Gmail desk.
             </p>
 
             <div className="contact-info-list">
               <div className="contact-info-item">
                 <span className="info-icon">✉️</span>
                 <div>
-                  <strong>Official Support Email</strong>
-                  <p>
-                    <a href={`mailto:${SUPPORT_EMAIL}`} className="support-email-link">
-                      {SUPPORT_EMAIL}
-                    </a>
-                  </p>
+                  <strong>Admin Support Gmail</strong>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "5px",
+                      marginTop: "5px"
+                    }}
+                  >
+                    {ADMIN_GMAIL.split(",").map((email) => (
+                      <a
+                        key={email}
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+                          email.trim()
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="support-email-link"
+                        style={{ wordBreak: "break-all", fontSize: "12.5px" }}
+                      >
+                        {email.trim()}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -85,7 +108,11 @@ function Contact() {
                 <span className="info-icon">📍</span>
                 <div>
                   <strong>Campus Address</strong>
-                  <p>Raintree Marg, Near Bharati Vidyapeeth, Opposite Kharghar Railway Station, Sector 7, CBD Belapur, Navi Mumbai, Maharashtra 400614</p>
+                  <p>
+                    Raintree Marg, Near Bharati Vidyapeeth, Opposite Kharghar
+                    Railway Station, Sector 7, CBD Belapur, Navi Mumbai,
+                    Maharashtra 400614
+                  </p>
                 </div>
               </div>
 
@@ -99,9 +126,9 @@ function Contact() {
             </div>
           </div>
 
-          {/* Right Column: Email Query Form */}
+          {/* Right Column: Gmail Query Form */}
           <div className="contact-form-panel">
-            <h2>Send Query to Support Email</h2>
+            <h2>Send Query to Admin Gmail</h2>
 
             <form onSubmit={handleSubmit} className="contact-form">
               <div className="contact-row">
@@ -165,18 +192,18 @@ function Contact() {
                   value={form.message}
                   onChange={handleChange}
                   required
-                  placeholder="Write your query in detail to send to placements@cdac.in..."
+                  placeholder="Write your query in detail to send to Admin Support Gmail..."
                 />
               </div>
 
               <button type="submit" className="contact-submit-btn">
-                Send Email to {SUPPORT_EMAIL} →
+                Send via Gmail to Admin Support →
               </button>
 
               {submitted && (
                 <p className="contact-success-msg">
-                  ✓ Your email query has been prepared for{" "}
-                  <strong>{SUPPORT_EMAIL}</strong>.
+                  ✓ Gmail compose tab opened for Admin Support. Click{" "}
+                  <strong>Send</strong> in Gmail to complete.
                 </p>
               )}
             </form>
