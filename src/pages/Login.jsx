@@ -14,7 +14,7 @@ function Login() {
     if (token && role === "student") return "/student-dashboard";
     return null;
   });
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ function Login() {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password })
+        body: JSON.stringify({ email, password })
       });
       const data = await response.json();
 
@@ -53,7 +53,7 @@ function Login() {
           }
         }, 700);
       } else {
-        setMessage(data.message || "Invalid email/PRN or password.");
+        setMessage(data.message || "Invalid email or password.");
       }
     } catch (err) {
       setMessage("Network error. Make sure backend server is running on port 7500.");
@@ -79,15 +79,15 @@ function Login() {
 
           <form className="admin-register-form" onSubmit={handleSubmit}>
             <div className="admin-form-field">
-              <label htmlFor="login-identifier">Email Address</label>
+              <label htmlFor="login-email">Email Address</label>
               <input
-                id="login-identifier"
-                type="text"
-                name="identifier"
+                id="login-email"
+                type="email"
+                name="email"
                 placeholder="Enter your email address"
-                value={identifier}
+                value={email}
                 onChange={(event) => {
-                  setIdentifier(event.target.value);
+                  setEmail(event.target.value);
                   setMessage("");
                 }}
                 autoComplete="username"

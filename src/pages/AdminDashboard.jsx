@@ -74,10 +74,12 @@ export default function AdminDashboard({ initialTab = 'dashboard' }) {
   const handleDeleteAdmin = async (id) => {
     if (!window.confirm('Are you sure you want to delete this admin account?')) return;
     try {
-      const res = await fetch(`${API_BASE}/admin/admins/${id}`, { method: 'DELETE' }).then((r) => r.json());
-      if (res.success) fetchAllData();
+      const response = await fetch(`${API_BASE}/admin/admins/${id}`, { method: 'DELETE' });
+      const res = await response.json();
+      if (!response.ok || !res.success) throw new Error(res.message || 'Failed to delete admin.');
+      fetchAllData();
     } catch (err) {
-      alert('Failed to delete admin.');
+      alert(err.message || 'Failed to delete admin.');
     }
   };
 
